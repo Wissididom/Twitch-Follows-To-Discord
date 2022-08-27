@@ -1,7 +1,7 @@
 require('dotenv').config();
-const { Client, Intents, Constants } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ApplicationCommandType, ApplicationCommandOptionType } = require('discord.js');
 
-const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES], partials: ['USER', 'CHANNEL', 'GUILD_MEMBER', 'MESSAGE', 'REACTION']}); // Discord Object
+const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages], partials: [Partials.User, Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction]});
 
 const mySecret = process.env['DISCORD_TOKEN'];  // Discord Token
 
@@ -12,29 +12,30 @@ client.on("ready", () => {
 	promises.push(client.application?.commands?.create({
 		name: 'poll',
 		description: 'Create a poll for a specific Twitch channel.',
+		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
 				name: 'title',
 				description: 'Question displayed for the poll.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			},
 			{
 				name: 'choices',
 				description: 'List of the poll choices (separated by semicolon).',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			},
 			{
 				name: 'duration',
 				description: 'Total duration for the poll (Default: in seconds).',
-				type: Constants.ApplicationCommandOptionTypes.INTEGER,
+				type: ApplicationCommandOptionType.Integer,
 				required: true
 			},
 			{
 				name: 'unit',
 				description: 'Which unit to use for duration.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: false,
 				choices: [
 					{
@@ -50,25 +51,25 @@ client.on("ready", () => {
 			{
 				name: 'bits',
 				description: 'Indicates if Bits can be used for voting.',
-				type: Constants.ApplicationCommandOptionTypes.BOOLEAN,
+				type: ApplicationCommandOptionType.Boolean,
 				required: false
 			},
 			{
 				name: 'bnumber',
 				description: 'Number of Bits required to vote once with Bits.',
-				type: Constants.ApplicationCommandOptionTypes.INTEGER,
+				type: ApplicationCommandOptionType.Integer,
 				required: false
 			},
 			{
 				name: 'channelpoints',
 				description: 'Indicates if Channel Points can be used for voting.',
-				type: Constants.ApplicationCommandOptionTypes.BOOLEAN,
+				type: ApplicationCommandOptionType.Boolean,
 				required: false
 			},
 			{
 				name: 'cpnumber',
 				description: 'Number of Channel Points required to vote once with Channel Points.',
-				type: Constants.ApplicationCommandOptionTypes.INTEGER,
+				type: ApplicationCommandOptionType.Integer,
 				required: false
 			}
 		]
@@ -76,17 +77,18 @@ client.on("ready", () => {
 	promises.push(client.application?.commands?.create({
 		name: 'endpoll',
 		description: 'End a poll that is currently active.',
+		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
 				name: 'id',
 				description: 'ID of the poll.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			},
 			{
 				name: 'status',
 				description: 'The poll status to be set.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true,
 				choices: [
 					{
@@ -104,11 +106,12 @@ client.on("ready", () => {
 	promises.push(client.application?.commands?.create({
 		name: 'getpoll',
 		description: 'Get information about all polls or specific polls for a Twitch channel (available for 90 days).',
+		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
 				name: 'id',
 				description: 'ID of a poll. Filters results to one or more specific polls.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			}
 		]
@@ -116,29 +119,30 @@ client.on("ready", () => {
 	promises.push(client.application?.commands?.create({
 		name: 'prediction',
 		description: 'Create a Channel Points Prediction for a specific Twitch channel.',
+		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
 				name: 'title',
 				description: 'Title for the Prediction.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			},
 			{
 				name: 'outcomes',
 				description: 'List of the outcomes (separated by comma, first is blue, second is pink).',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			},
 			{
 				name: 'duration',
 				description: 'Total duration for the Prediction (Default: in seconds).',
-				type: Constants.ApplicationCommandOptionTypes.INTEGER,
+				type: ApplicationCommandOptionType.Integer,
 				required: true
 			},
 			{
 				name: 'unit',
 				description: 'Which unit to use for duration.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: false,
 				choices: [
 					{
@@ -156,17 +160,18 @@ client.on("ready", () => {
 	promises.push(client.application?.commands?.create({
 		name: 'endprediction',
 		description: 'Lock, resolve, or cancel a Channel Points Prediction.',
+		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
 				name: 'id',
 				description: 'ID of the Prediction.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			},
 			{
 				name: 'status',
 				description: 'The Prediction status to be set.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true,
 				choices: [
 					{
@@ -186,7 +191,7 @@ client.on("ready", () => {
 			{
 				name: 'winning_outcome_id',
 				description: 'ID of the winning outcome for the Prediction (Required if status is RESOLVED).',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: false
 			}
 		]
@@ -194,11 +199,12 @@ client.on("ready", () => {
 	promises.push(client.application?.commands?.create({
 		name: 'getprediction',
 		description: 'Get information about all Channel Points Predictions or specific Channel Points Predictions.',
+		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
 				name: 'id',
 				description: 'ID of a poll. Filters results to one or more specific polls.',
-				type: Constants.ApplicationCommandOptionTypes.STRING,
+				type: ApplicationCommandOptionType.String,
 				required: true
 			}
 		]

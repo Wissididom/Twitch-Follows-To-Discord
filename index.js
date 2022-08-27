@@ -4,16 +4,16 @@ LIBRARIES
 
 require('dotenv').config();
 
-const { Client, Intents } = require('discord.js');
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const express = require('express');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 const fs = require('fs');
 
 /*
 OBJECTS, TOKENS, GLOBAL VARIABLES
 */
 
-const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES], partials: ['USER', 'CHANNEL', 'GUILD_MEMBER', 'MESSAGE', 'REACTION']}); // Discord Object
+const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages], partials: [Partials.User, Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction]});
 
 const mySecret = process.env['DISCORD_TOKEN'];  // Discord Token
 
@@ -50,7 +50,7 @@ function handleInteraction(interaction) {
 			ephemeral: process.env['EPHEMERAL'] == 'true'
 		});
 	} else {
-		if (interaction.isCommand()) {
+		if (interaction.isChatInputCommand()) {
 			interaction.deferReply();
 			switch (interaction.commandName) {
 				case 'poll':
