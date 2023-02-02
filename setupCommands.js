@@ -49,18 +49,6 @@ client.on("ready", () => {
 				]
 			},
 			{
-				name: 'bits',
-				description: 'Indicates if Bits can be used for voting.',
-				type: ApplicationCommandOptionType.Boolean,
-				required: false
-			},
-			{
-				name: 'bnumber',
-				description: 'Number of Bits required to vote once with Bits.',
-				type: ApplicationCommandOptionType.Integer,
-				required: false
-			},
-			{
 				name: 'channelpoints',
 				description: 'Indicates if Channel Points can be used for voting.',
 				type: ApplicationCommandOptionType.Boolean,
@@ -221,9 +209,9 @@ This section checks if there is a TOKEN secret and uses it to login if it is fou
 */
 
 if (!mySecret) {
-  console.log("TOKEN not found! You must setup the Discord TOKEN as per the README file before running this bot.");
-  process.kill(process.pid, 'SIGTERM');  // Kill Bot
+	console.log("TOKEN not found! You must setup the Discord TOKEN as per the README file before running this bot.");
+	process.kill(process.pid, 'SIGTERM');  // Kill Bot
 } else {
-  // Logs in with secret TOKEN
-  client.login(mySecret);
+	// Logs in with secret TOKEN
+	client.login(mySecret);
 }

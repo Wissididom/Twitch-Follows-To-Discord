@@ -6,14 +6,26 @@ require('dotenv').config();
 
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const express = require('express');
-//const fetch = require('node-fetch');
 const fs = require('fs');
 
 /*
 OBJECTS, TOKENS, GLOBAL VARIABLES
 */
 
-const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages], partials: [Partials.User, Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction]});
+const client = new Client({
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.DirectMessages
+	],
+	partials: [
+		Partials.User,
+		Partials.Channel,
+		Partials.GuildMember,
+		Partials.Message,
+		Partials.Reaction
+	]
+});
 
 const mySecret = process.env['DISCORD_TOKEN'];  // Discord Token
 
@@ -34,49 +46,98 @@ client.on("ready", () => {
 });
 
 client.on("interactionCreate", interaction => {
-	if (interaction.isCommand())
-		handleInteraction(interaction);
+	if (interaction.isCommand() || interaction.isChatInputCommand())
+		handleCommand(interaction);
 });
 
-function handleInteraction(interaction) {
+function getNoAllowedChannelIdError(channel) {
+	return `Please first set a channel where you want to accept the commands! For <#${channel.id}> (${channel.name}) just set the value for \`ALLOWED_CHANNEL_ID\` to \`${channel.id}\` in the .env file!`;
+}
+
+function getChannelNotAllowedError(channel) {
+	return `<#${channel.id}> (${channel.name}) is not allowed to accept commands!`;
+}
+
+async function getBroadcaster() {
+	return (await fetch(`https://api.twitch.tv/helix/users?login=${process.env.BROADCASTER_LOGIN}`, {
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`
+		}
+	}).then(res => res.json()).catch(err => console.error)).data[0];
+}
+
+async function getBroadcasterId() {
+	return (await getBroadcaster()).id;
+}
+
+function buildPollChoices(create) {
+	let response = [];
+	let choices = '';
+	for (let i = 0; i < data.choices.length; i++) {
+		let choice = data.choices[i];
+		response.push(`> ${choice.title}`);
+		response.push(`> > Choice-ID: ${choice.id}`);
+		if (!create) {
+			response.push(`> > Votes: ${choice.votes}`);
+			response.push(`> > Channel Points Votes: ${choice.channel_points_votes}`);
+			response.push(`> > Bits Votes: ${choice.bits_votes}\n`);
+		}
+	}
+	choices = choices.trim();
+	return response.join("\n");
+}
+
+function toDiscordTimestamp(twitchTime) {
+	return `<t:${Math.floor(Date.parse(twitchTime) / 1000)}>`;
+}
+
+function handleCommand(interaction) {
 	if (!process.env['ALLOWED_CHANNEL_ID']) {
-		interaction.reply({
-			content: `Please first set a channel where you want me to accept the commands! For <#${interaction.channel.id}> (${interaction.channel.name}) just add the line \`ALLOWED_CHANNEL_ID=${interaction.channel.id}\` to .env!`,
+		await interaction.reply({
+			content: getNoAllowedChannelIdError(interaction.channel),
 			ephemeral: process.env['EPHEMERAL'] == 'true'
 		});
 	} else if (interaction.channel.id != process.env['ALLOWED_CHANNEL_ID']) {
-		interaction.reply({
-			content: `<#${interaction.channel.id}> (${interaction.channel.name}) is not allowed to accept commands!`,
+		await interaction.reply({
+			content: getChannelNotAllowedError(interaction.channel),
 			ephemeral: process.env['EPHEMERAL'] == 'true'
 		});
 	} else {
-		if (interaction.isChatInputCommand()) {
-			interaction.deferReply();
+		await interaction.deferReply();
+		await validate(false).then(async (value) => {
 			switch (interaction.commandName) {
 				case 'poll':
-					createPoll(interaction);
+					await createPoll(interaction);
 					break;
 				case 'endpoll':
-					endPoll(interaction);
+					await endPoll(interaction);
 					break;
 				case 'getpoll':
-					getPoll(interaction);
+					await getPoll(interaction);
 					break;
 				case 'prediction':
-					createPrediction(interaction);
+					await createPrediction(interaction);
 					break;
 				case 'endprediction':
-					endPrediction(interaction);
+					await endPrediction(interaction);
 					break;
 				case 'getprediction':
-					getPrediction(interaction);
+					await getPrediction(interaction);
 					break;
 			}
-		}
+		}).catch((err) => {
+			await interaction.editReply({
+				content: 'Token validation failed!'
+			});
+		});
 	}
 }
 
+// https://dev.twitch.tv/docs/api/reference#create-poll
 async function createPoll(interaction) {
+	const broadcasterId = await getBroadcasterId();
+	const title = interaction.options.getString('title');
 	const choicesStr = interaction.options.getString('choices').split(';');
 	let choicesArr = [];
 	for (let i = 0; i < choicesStr.length; i++) {
@@ -84,148 +145,152 @@ async function createPoll(interaction) {
 			title: choicesStr[i].trim()
 		});
 	}
+	const duration = interaction.options.getInteger('duration');
 	const unit = interaction.options.getString('unit');
 	let durationMultiplier = 1;
 	if (unit && unit.toLowerCase() == 'minutes')
 		durationMultiplier = 60;
-	validate(false).then(async (value) => {
-		fetch('https://api.twitch.tv/helix/polls', {
-			method: 'POST',
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				broadcaster_id: (await fetch(`https://api.twitch.tv/helix/users?login=${process.env.BROADCASTER_LOGIN}`, {
-					headers: {
-						'Client-ID': process.env.TWITCH_CLIENT_ID,
-						'Authorization': `Bearer ${tokens.access_token}`
-					}
-				}).then(res => res.json()).catch(err => console.error)).data[0].id,
-				title: interaction.options.getString('title'),
-				choices: choicesArr,
-				duration: interaction.options.getInteger('duration') * durationMultiplier,
-				bits_voting_enabled: interaction.options.getBoolean('bits'),
-				bits_per_vote: interaction.options.getInteger('bnumber'),
-				channel_points_voting_enabled: interaction.options.getBoolean('channelpoints'),
-				channel_points_per_vote: interaction.options.getInteger('cpnumber')
-			})
-		}).then(res => res.json()).then(res => {
-			let response = 'Poll successfully started!\n';
-			if (res.error) {
-				response = `Error: ${res.error}\nError-Message: ${res.message}`;
-			} else {
-				let data = res.data[0];
-				let choices = '';
-				for (let i = 0; i < data.choices.length; i++) {
-					choices += `> ${data.choices[i].title}\n> > Choice-ID: ${data.choices[i].id}\n`; // votes: number, channel_points_votes: number, bits_votes: number
-				}
-				choices = choices.trim();
-				response += `Poll-ID: ${data.id}\nBroadcaster: ${data.broadcaster_name}\nTitle: ${data.title}\nChoices:\n${choices}\nBits Voting ${data.bits_voting_enabled ? 'enabled' : 'disabled'}\n`;
-				response += `Bits per vote: ${data.bits_per_vote}\nChannel Points Voting ${data.channel_points_voting_enabled ? 'enabled' : 'disabled'}\nPoll Status: ${data.status}\n`;
-				response += `Poll Duration: ${data.duration} seconds`; // started_at
-			}
-			interaction.editReply({content: response});
-		}).catch(async (err) => {
-			interaction.editReply({content: `Error in speaking to Twitch: ${err}\nValidating and probably requesting authorization on my hosts computer`});
-			await validate(false);
+	const channelPointsVotingEnabled = interaction.options.getBoolean('channelpoints');
+	const channelPointsPerVote = interaction.options.getBoolean('cpnumber');
+	await fetch('https://api.twitch.tv/helix/polls', {
+		method: 'POST',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			broadcaster_id: broadcasterId,
+			title: title,
+			choices: choicesArr,
+			duration: duration * durationMultiplier,
+			channel_points_voting_enabled: channelPointsVotingEnabled,
+			channel_points_per_vote: channelPointsPerVote
 		})
-	}).catch((err) => {
-		interaction.editReply({content: 'Token validation/refresh failed!'});
+	}).then(res => res.json()).then(res => {
+		let response = [];
+		if (res.error) {
+			response.push(`Error: ${res.error}`);
+			response.push(`Error-Message: ${res.message}`);
+		} else {
+			const data = res.data[0];
+			const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
+			response.push(`Poll \`\`${data.title}\`\` successfully started!\n`);
+			const choices = buildPollChoices(true);
+			response.push(`Title: ${data.title}`);
+			response.push(`Poll-ID: ${data.id}`);
+			response.push(`Broadcaster: ${data.broadcaster_name}`);
+			response.push(`Choices:\n${choices}`);
+			response.push(`Channel Points Voting ${channelPointsVoting}`);
+			response.push(`Poll Status: ${data.status}`);
+			response.push(`Poll Duration: ${data.duration} seconds`);
+			response.push(`Started At: ${toDiscordTimestamp(data.started_at)}`);
+		}
+		await interaction.editReply({
+			content: response.join("\n")
+		});
+	}).catch(async (err) => {
+		await interaction.editReply({
+			content: `Error creating Poll on Twitch: ${err}`
+		});
+		await validate(false);
 	});
 }
 
+// https://dev.twitch.tv/docs/api/reference#end-poll
 async function endPoll(interaction) {
+	const broadcasterId = await getBroadcasterId();
+	const pollId = interaction.options.getString('id');
 	let status = interaction.options.getString('status');
 	status = status.substring(0, status.indexOf(' ')).trim();
-	validate(false).then(async (value) => {
-		fetch('https://api.twitch.tv/helix/polls', {
-			method: 'PATCH',
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				broadcaster_id: (await fetch(`https://api.twitch.tv/helix/users?login=${process.env.BROADCASTER_LOGIN}`, {
-					headers: {
-						'Client-ID': process.env.TWITCH_CLIENT_ID,
-						'Authorization': `Bearer ${tokens.access_token}`
-					}
-				}).then(res => res.json()).catch(err => console.error)).data[0].id,
-				id: interaction.options.getString('id'),
-				status: status
-			})
-		}).then(res => res.json()).then(res => {
-			let response = 'Poll successfully ended!\n';
-			if (res.error) {
-				response = `Error: ${res.error}\nError-Message: ${res.message}`;
-			} else {
-				let data = res.data[0];
-				let choices = '';
-				for (let i = 0; i < data.choices.length; i++) {
-					let choice = data.choices[i];
-					choices += `> ${choice.title}\n> > Choice-ID: ${choice.id}\n> > Votes: ${choice.votes}\n> > Channel Points Votes: ${choice.channel_points_votes}\n> > Bits Votes: ${choice.bits_votes}\n`;
-				}
-				choices = choices.trim();
-				response += `Poll-ID: ${data.id}\nBroadcaster: ${data.broadcaster_name}\nTitle: ${data.title}\nChoices:\n${choices}\nBits Voting ${data.bits_voting_enabled ? 'enabled' : 'disabled'}\n`;
-				response += `Bits per vote: ${data.bits_per_vote}\nChannel Points Voting ${data.channel_points_voting_enabled ? 'enabled' : 'disabled'}\nPoll Status: ${data.status}\n`;
-				response += `Poll Duration: ${data.duration} seconds\nStarted at <t:${Math.floor(Date.parse(data.started_at) / 1000)}>\nEnded at <t:${Math.floor(Date.parse(data.ended_at) / 1000)}>`;
-			}
-			interaction.editReply({content: response});
-		}).catch(async (err) => {
-			interaction.editReply({content: `Error in speaking to Twitch: ${err}\nValidating and probably requesting authorization on my hosts computer`});
-			await validate(false);
+	await fetch('https://api.twitch.tv/helix/polls', {
+		method: 'PATCH',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			broadcaster_id: broadcasterId,
+			id: pollId,
+			status: status
+		})
+	}).then(res => res.json()).then(res => {
+		let response = [];
+		if (res.error) {
+			response.push(`Error: ${res.error}`);
+			response.push(`Error-Message: ${res.message}`);
+		} else {
+			let data = res.data[0];
+			const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
+			response.push(`Poll \`\`${data.title}\`\` successfully ended!`);
+			const choices = buildPollChoices(false);
+			response.push(`Title: ${data.title}`);
+			response.push(`Poll-ID: ${data.id}`);
+			response.push(`Broadcaster: ${data.broadcaster_name}`);
+			response.push(`Choices:\n${choices}`);
+			response.push(`Channel Points Voting ${channelPointsVoting}`);
+			response.push(`Poll Status: ${data.status}`);
+			response.push(`Poll Duration: ${data.duration} seconds`);
+			response.push(`Started at ${toDiscordTimestamp(data.started_at)}`);
+			response.push(`Ended at ${toDiscordTimestamp(data.ended_at)}`);
+		}
+		await interaction.editReply({
+			content: response.join("\n")
 		});
-	}).catch((err) => {
-		interaction.editReply({content: 'Token validation/refresh failed!'});
+	}).catch(async (err) => {
+		await interaction.editReply({
+			content: `Error ending Poll on Twitch: ${err}`
+		});
+		await validate(false);
 	});
 }
 
+// https://dev.twitch.tv/docs/api/reference#get-poll
 async function getPoll(interaction) {
-	validate(false).then(async (value) => {
-		let broadcaster_id = (await fetch(`https://api.twitch.tv/helix/users?login=${process.env.BROADCASTER_LOGIN}`, {
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`
-			}
-		}).then(res => res.json()).catch(err => console.error)).data[0].id;
-		let poll_id = interaction.options.getString('id');
-		fetch(`https://api.twitch.tv/helix/polls?broadcaster_id=${broadcaster_id}&id=${poll_id}`, {
-			method: 'GET',
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`,
-				'Content-Type': 'application/json'
-			}
-		}).then(res => res.json()).then(res => {
-			let response = 'Got Poll successfully!\n';
-			if (res.error) {
-				response = `Error: ${res.error}\nError-Message: ${res.message}`;
-			} else {
-				let data = res.data[0];
-				let choices = '';
-				for (let i = 0; i < data.choices.length; i++) {
-					let choice = data.choices[i];
-					choices += `> ${choice.title}\n> > Choice-ID: ${choice.id}\n> > Votes: ${choice.votes}\n> > Channel Points Votes: ${choice.channel_points_votes}\n> > Bits Votes: ${choice.bits_votes}\n`;
-				}
-				choices = choices.trim();
-				response += `Poll-ID: ${data.id}\nBroadcaster: ${data.broadcaster_name}\nTitle: ${data.title}\nChoices:\n${choices}\nBits Voting ${data.bits_voting_enabled ? 'enabled' : 'disabled'}\n`;
-				response += `Bits per vote: ${data.bits_per_vote}\nChannel Points Voting ${data.channel_points_voting_enabled ? 'enabled' : 'disabled'}\nPoll Status: ${data.status}\n`;
-				response += `Poll Duration: ${data.duration} seconds\nStarted at <t:${Math.floor(Date.parse(data.started_at) / 1000)}>`;
-			}
-			interaction.editReply({content: response});
-		}).catch(async (err) => {
-			interaction.editReply({content: `Error in speaking to Twitch: ${err}\nValidating and probably requesting authorization on my hosts computer`});
-			await validate(false);
+	const broadcasterId = await getBroadcasterId();
+	const pollId = interaction.options.getString('id');
+	await fetch(`https://api.twitch.tv/helix/polls?broadcaster_id=${broadcasterId}&id=${pollId}`, {
+		method: 'GET',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`,
+			'Content-Type': 'application/json'
+		}
+	}).then(res => res.json()).then(res => {
+		let response = [];
+		if (res.error) {
+			response.push(`Error: ${res.error}`);
+			response.push(`Error-Message: ${res.message}`);
+		} else {
+			let data = res.data[0];
+			const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
+			response.push(`Got Poll \`\`${data.title}\`\` successfully!`);
+			const choices = buildPollChoices(false);
+			response.push(`Title: ${data.title}`);
+			response.push(`Poll-ID: ${data.id}`);
+			response.push(`Broadcaster: ${data.broadcaster_name}`);
+			response.push(`Choices:\n${choices}`);
+			response.push(`Channel Points Voting ${channelPointsVoting}`);
+			response.push(`Poll Status: ${data.status}`);
+			response.push(`Poll Duration: ${data.duration} seconds`);
+			response.push(`Started at ${toDiscordTimestamp(data.started_at)}`);
+		}
+		await interaction.editReply({
+			content: response.join("\n")
 		});
-	}).catch((err) => {
-		interaction.editReply({content: 'Token validation/refresh failed!'});
+	}).catch(async (err) => {
+		await interaction.editReply({
+			content: `Error getting Poll from Twitch: ${err}`
+		});
+		await validate(false);
 	});
 }
 
-function createPrediction(interaction) {
+// https://dev.twitch.tv/docs/api/reference#create-prediction
+async function createPrediction(interaction) {
+	const broadcasterId = await getBroadcasterId();
+	const title = interaction.options.getString('title');
 	const outcomesStr = interaction.options.getString('outcomes').split(',');
 	let outcomesArr = [];
 	for (let i = 0; i < outcomesStr.length; i++) {
@@ -233,151 +298,178 @@ function createPrediction(interaction) {
 			title: outcomesStr[i].trim()
 		});
 	}
+	const duration = interaction.options.getInteger('duration');
 	const unit = interaction.options.getString('unit');
 	let durationMulitplier = 1;
 	if (unit.toLowerCase() == 'minutes')
 		durationMultiplier = 60;
-	validate(false).then(async (value) => {
-		fetch('https://api.twitch.tv/helix/predictions', {
-			method: 'POST',
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				broadcaster_id: (await fetch(`https://api.twitch.tv/helix/users?login=${process.env.BROADCASTER_LOGIN}`, {
-					headers: {
-						'Client-ID': process.env.TWITCH_CLIENT_ID,
-						'Authorization': `Bearer ${tokens.access_token}`
-					}
-				}).then(res => res.json()).catch(err => console.error)).data[0].id,
-				title: interaction.options.getString('title'),
-				outcomes: outcomesArr,
-				prediction_window: interaction.options.getInteger('duration') * durationMultiplier
-			})
-		}).then(res => res.json()).then(res => {
-			let response = 'Prediction successfully started!\n';
-			if (res.error) {
-				response = `Error: ${res.error}\nError-Message: ${res.message}`;
-			} else {
-				let data = res.data[0];
-				let outcomes = '';
-				for (let i = 0; i < data.outcomes.length; i++) {
-					outcomes += `> ${data.outcomes[i].title}\n> > Outcome-ID: ${data.outcomes[i].id}\n> > Outcome-Color: ${data.outcomes[i].color}\n`; // users: number, channel_points: number, top_predictors: {user: User}
-				}
-				outcomes = outcomes.trim();
-				response += `Prediction-ID: ${data.id}\nBroadcaster: ${data.broadcaster_name}\nTitle: ${data.title}\nOutcomes:\n${outcomes}\nBits Voting ${data.bits_voting_enabled ? 'enabled' : 'disabled'}\n`;
-				response += `Prediction Duration: ${data.prediction_window} seconds\nPrediction Status: ${data.status}`; // created_at, ended_at, locked_at
+	await fetch('https://api.twitch.tv/helix/predictions', {
+		method: 'POST',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			broadcaster_id: broadcasterId,
+			title,
+			outcomes: outcomesArr,
+			prediction_window: duration * durationMultiplier
+		})
+	}).then(res => res.json()).then(res => {
+		let response = [];
+		if (res.error) {
+			response.push(`Error: ${res.error}`);
+			response.push(`Error-Message: ${res.message}`);
+		} else {
+			let data = res.data[0];
+			response.push(`Prediction \`\`${data.title}\`\` successfully started!`);
+			let outcomes = [];
+			for (let i = 0; i < data.outcomes.length; i++) {
+				let outcome = data.outcomes[i];
+				outcomes.push(`> ${outcome.title}`);
+				outcomes.push(`> > Outcome-ID: ${outcome.id}`);
+				outcomes.push(`> > Outcome-Color: ${outcome.color}`);
 			}
-			interaction.editReply({content: response});
-		}).catch(async (err) => {
-			interaction.editReply({content: `Error in speaking to Twitch: ${err}\nValidating and probably requesting authorization on my hosts computer`});
-			await validate(false);
+			response.push(`Title: ${data.title}`);
+			response.push(`Prediction-ID: ${data.id}`);
+			response.push(`Broadcaster: ${data.broadcaster_name}`);
+			response.push(`Outcomes:\n${outcomes.join("\n")}`);
+			response.push(`Prediction Window: ${data.prediction_window} seconds`);
+			response.push(`Prediction Status: ${data.status}`);
+			response.push(`Created At: ${toDiscordTimestamp(data.created_at)}`);
+		}
+		await interaction.editReply({
+			content: response.join("\n")
 		});
-	}).catch((err) => {
-		interaction.editReply({content: 'Token validation/refresh failed!'});
+	}).catch(async (err) => {
+		await interaction.editReply({
+			content: `Error creating prediction on Twitch: ${err}`
+		});
+		await validate(false);
 	});
 }
 
-function endPrediction(interaction) {
+// https://dev.twitch.tv/docs/api/reference#end-prediction
+async function endPrediction(interaction) {
+	const broadcasterId = await getBroadcasterId();
 	let status = interaction.options.getString('status');
 	status = status.substring(0, status.indexOf(' ')).trim();
-	let winning_outcome_id = interaction.options.getString('winning_outcome_id');
-	validate(false).then(async (value) => {
-		fetch('https://api.twitch.tv/helix/predictions', {
-			method: 'PATCH',
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				broadcaster_id: (await fetch(`https://api.twitch.tv/helix/users?login=${process.env.BROADCASTER_LOGIN}`, {
-					headers: {
-						'Client-ID': process.env.TWITCH_CLIENT_ID,
-						'Authorization': `Bearer ${tokens.access_token}`
-					}
-				}).then(res => res.json()).catch(err => console.error)).data[0].id,
-				id: interaction.options.getString('id'),
-				status: status,
-				winning_outcome_id: (winning_outcome_id ? winning_outcome_id : undefined)
-			})
-		}).then(res => res.json()).then(res => {
-			let response = 'Prediction successfully ended!\n';
-			if (res.error) {
-				response = `Error: ${res.error}\nError-Message: ${res.message}`;
-			} else {
-				let data = res.data[0];
-				let outcomes = '';
-				for (let i = 0; i < data.outcomes.length; i++) {
-					let outcome = data.outcomes[i];
-					outcomes += `> ${outcome.title}\n> > Outcome-ID: ${outcome.id}\n> > Users: ${outcome.users}\n> > Channel Points: ${outcome.channel_points}\n> > Color: ${outcome.color}\n`;
-					outcomes += '> > Top Predictors:\n';
-					for (let j = 0; outcome.top_predictors && j < outcome.top_predictors.length; j++) {
-						let topPredictor = outcome.top_predictors[j].user;
-						outcomes += `> > > User: ${topPredictor.name} (${topPredictor.id})\n> > > > Channel Points used: ${topPredictor.channel_points_used}\n> > > > Channel Points won: ${topPredictor.channel_points_won}\n`;
-					}
+	const winningOutcomeId = interaction.options.getString('winning_outcome_id') ?? undefined;
+	const predictionId = interaction.options.getString('id');
+	await fetch('https://api.twitch.tv/helix/predictions', {
+		method: 'PATCH',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			broadcaster_id: broadcasterId,
+			id: predictionId,
+			status: status,
+			winning_outcome_id: winningOutcomeId
+		})
+	}).then(res => res.json()).then(res => {
+		let response = [];
+		if (res.error) {
+			response.push(`Error: ${res.error}`);
+			response.push(`Error-Message: ${res.message}`);
+		} else {
+			let data = res.data[0];
+			response.push(`Prediction \`\`${data.title}\`\` successfully ended!`);
+			let outcomes = '';
+			for (let i = 0; i < data.outcomes.length; i++) {
+				let outcome = data.outcomes[i];
+				outcomes.push(`> ${outcome.title}`);
+				outcomes.push(`> > Outcome-ID: ${outcome.id}`);
+				outcomes.push(`> > Users: ${outcome.users}`);
+				outcomes.push(`> > Channel Points: ${outcome.channel_points}`);
+				outcomes.push(`> > Color: ${outcome.color}`);
+				outcomes.push('> > Top Predictors:');
+				for (let j = 0; outcome.top_predictors && j < outcome.top_predictors.length; j++) {
+					let topPredictor = outcome.top_predictors[j].user;
+					outcomes.push(`> > > User: ${topPredictor.name} (${topPredictor.id})`);
+					outcomes.push(`> > > > Channel Points used: ${topPredictor.channel_points_used}`);
+					outcomes.push(`> > > > Channel Points won: ${topPredictor.channel_points_won}\n`);
 				}
-				outcomes = outcomes.trim();
-				response += `Prediction-ID: ${data.id}\nBroadcaster: ${data.broadcaster_name}\nTitle: ${data.title}\nOutcomes:\n${outcomes}\nPrediction Duration: ${data.prediction_window} seconds\n`;
-				response += `Prediction-Status: ${data.status}\nCreated at: <t:${Math.floor(Date.parse(data.created_at) / 1000)}>\nEnded at <t:${Math.floor(Date.parse(data.ended_at) / 1000)}>\n`;
-				response += `Locked at <t:${Math.floor(Date.parse(data.locked_at) / 1000)}>`;
 			}
-			interaction.editReply({content: response});
-		}).catch(async (err) => {
-			interaction.editReply({content: `Error in speaking to Twitch: ${err}\nValidating and probably requesting authorization on my hosts computer`});
-			await validate(false);
+			outcomes = outcomes.trim();
+			response.push(`Title: ${data.title}`);
+			response.push(`Prediction-ID: ${data.id}`);
+			response.push(`Broadcaster: ${data.broadcaster_name}`);
+			response.push(`Outcomes:\n${outcomes}`);
+			response.push(`Prediction Window: ${data.prediction_window} seconds\n`);
+			response.push(`Prediction-Status: ${data.status}`);
+			response.push(`Created at ${toDiscordTimestamp(data.created_at)}`);
+			response.push(`Ended at ${toDiscordTimestamp(data.ended_at)}`);
+			response += `Locked at ${toDiscordTimestamp(data.locked_at)}`;
+		}
+		await interaction.editReply({
+			content: response.join("\n")
 		});
-	}).catch((err) => {
-		interaction.editReply({content: 'Token validation/refresh failed!'});
+	}).catch(async (err) => {
+		await interaction.editReply({
+			content: `Error ending prediction on Twitch: ${err}`
+		});
+		await validate(false);
 	});
 }
 
-function getPrediction(interaction) {
-	validate(false).then(async (value) => {
-		let broadcaster_id = (await fetch(`https://api.twitch.tv/helix/users?login=${process.env.BROADCASTER_LOGIN}`, {
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`
-			}
-		}).then(res => res.json()).catch(err => console.error)).data[0].id;
-		let prediction_id = interaction.options.getString('id');
-		fetch(`https://api.twitch.tv/helix/predictions?broadcaster_id=${broadcaster_id}&id=${prediction_id}`, {
-			method: 'GET',
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`,
-				'Content-Type': 'application/json'
-			}
-		}).then(res => res.json()).then(res => {
-			let response = 'Got Prediction successfully!\n';
-			if (res.error) {
-				response = `Error: ${res.error}\nError-Message: ${res.message}`;
-			} else {
-				let data = res.data[0];
-				let outcomes = '';
-				for (let i = 0; i < data.outcomes.length; i++) {
-					let outcome = data.outcomes[i];
-					outcomes += `> ${outcome.title}\n> > Outcome-ID: ${outcome.id}\n> > Users: ${outcome.users}\n> > Channel Points: ${outcome.channel_points}\n> > Color: ${outcome.color}\n`;
-					outcomes += '> > Top Predictors:\n';
-					for (let j = 0; outcome.top_predictors && j < outcome.top_predictors.length; j++) {
-						let topPredictor = outcome.top_predictors[j].user;
-						outcomes += `> > > User: ${topPredictor.name} (${topPredictor.id})\n> > > > Channel Points used: ${topPredictor.channel_points_used}\n> > > > Channel Points won: ${topPredictor.channel_points_won}\n`;
-					}
+// https://dev.twitch.tv/docs/api/reference#get-prediction
+async function getPrediction(interaction) {
+	const broadcasterId = await getBroadcasterId();
+	const predictionId = interaction.options.getString('id');
+	await fetch(`https://api.twitch.tv/helix/predictions?broadcaster_id=${broadcasterId}&id=${predictionId}`, {
+		method: 'GET',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`,
+			'Content-Type': 'application/json'
+		}
+	}).then(res => res.json()).then(res => {
+		let response = [];
+		if (res.error) {
+			response.push(`Error: ${res.error}`);
+			response.push(`Error-Message: ${res.message}`);
+		} else {
+			let data = res.data[0];
+			response.push(`Got Prediction \`\`${data.title}\`\` successfully!`);
+			let outcomes = '';
+			for (let i = 0; i < data.outcomes.length; i++) {
+				let outcome = data.outcomes[i];
+				outcomes.push(`> ${outcome.title}`);
+				outcomes.push(`> > Outcome-ID: ${outcome.id}`);
+				outcomes.push(`> > Users: ${outcome.users}`);
+				outcomes.push(`> > Channel Points: ${outcome.channel_points}`);
+				outcomes.push(`> > Color: ${outcome.color}`);
+				outcomes.push('> > Top Predictors:');
+				for (let j = 0; outcome.top_predictors && j < outcome.top_predictors.length; j++) {
+					let topPredictor = outcome.top_predictors[j].user;
+					outcomes.push(`> > > User: ${topPredictor.name} (${topPredictor.id})`);
+					outcomes.push(`> > > > Channel Points used: ${topPredictor.channel_points_used}`);
+					outcomes.push(`> > > > Channel Points won: ${topPredictor.channel_points_won}`);
 				}
-				outcomes = outcomes.trim();
-				response += `Prediction-ID: ${data.id}\nBroadcaster: ${data.broadcaster_name}\nTitle: ${data.title}\nOutcomes:\n${outcomes}\nPrediction Duration: ${data.prediction_window} seconds\n`;
-				response += `Prediction-Status: ${data.status}\nCreated at: <t:${Math.floor(Date.parse(data.created_at) / 1000)}>\nEnded at <t:${Math.floor(Date.parse(data.ended_at) / 1000)}>\n`;
-				response += `Locked at <t:${Math.floor(Date.parse(data.locked_at) / 1000)}>`;
 			}
-			interaction.editReply({content: response});
-		}).catch(async (err) => {
-			interaction.editReply({content: `Error in speaking to Twitch: ${err}\nValidating and probably requesting authorization on my hosts computer`});
-			await validate(false);
+			outcomes = outcomes.trim();
+			response.push(`Title: ${data.title}`);
+			response.push(`Prediction-ID: ${data.id}`);
+			response.push(`Broadcaster: ${data.broadcaster_name}`);
+			response.push(`Outcomes:\n${outcomes}`);
+			response.push(`Prediction Duration: ${data.prediction_window} seconds`);
+			response.push(`Prediction-Status: ${data.status}`);
+			response.push(`Created at ${toDiscordTimestamp(data.created_at)}`);
+			response.push(`Ended at ${toDiscordTimestamp(data.ended_at)}`);
+			response.push(`Locked at ${toDiscordTimestamp(data.locked_at)}`);
+		}
+		interaction.editReply({
+			content: response.join("\n")
 		});
-	}).catch((err) => {
-		interaction.editReply({content: 'Token validation/refresh failed!'});
+	}).catch(async (err) => {
+		interaction.editReply({
+			content: `Error getting prediction from Twitch: ${err}`
+		});
+		await validate(false);
 	});
 }
 
