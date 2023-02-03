@@ -45,9 +45,9 @@ client.on("ready", () => {
 	console.log(`Logged in as ${client.user.tag}!`);  // Logging
 });
 
-client.on("interactionCreate", interaction => {
+client.on("interactionCreate", async interaction => {
 	if (interaction.isCommand() || interaction.isChatInputCommand())
-		handleCommand(interaction);
+		await handleCommand(interaction);
 });
 
 function getNoAllowedChannelIdError(channel) {
@@ -92,7 +92,7 @@ function toDiscordTimestamp(twitchTime) {
 	return `<t:${Math.floor(Date.parse(twitchTime) / 1000)}>`;
 }
 
-function handleCommand(interaction) {
+async function handleCommand(interaction) {
 	if (!process.env['ALLOWED_CHANNEL_ID']) {
 		await interaction.reply({
 			content: getNoAllowedChannelIdError(interaction.channel),
@@ -126,7 +126,7 @@ function handleCommand(interaction) {
 					await getPrediction(interaction);
 					break;
 			}
-		}).catch((err) => {
+		}).catch(async (err) => {
 			await interaction.editReply({
 				content: 'Token validation failed!'
 			});
@@ -167,7 +167,7 @@ async function createPoll(interaction) {
 			channel_points_voting_enabled: channelPointsVotingEnabled,
 			channel_points_per_vote: channelPointsPerVote
 		})
-	}).then(res => res.json()).then(res => {
+	}).then(res => res.json()).then(async res => {
 		let response = [];
 		if (res.error) {
 			response.push(`Error: ${res.error}`);
@@ -215,7 +215,7 @@ async function endPoll(interaction) {
 			id: pollId,
 			status: status
 		})
-	}).then(res => res.json()).then(res => {
+	}).then(res => res.json()).then(async res => {
 		let response = [];
 		if (res.error) {
 			response.push(`Error: ${res.error}`);
@@ -257,7 +257,7 @@ async function getPoll(interaction) {
 			'Authorization': `Bearer ${tokens.access_token}`,
 			'Content-Type': 'application/json'
 		}
-	}).then(res => res.json()).then(res => {
+	}).then(res => res.json()).then(async res => {
 		let response = [];
 		if (res.error) {
 			response.push(`Error: ${res.error}`);
@@ -316,7 +316,7 @@ async function createPrediction(interaction) {
 			outcomes: outcomesArr,
 			prediction_window: duration * durationMultiplier
 		})
-	}).then(res => res.json()).then(res => {
+	}).then(res => res.json()).then(async res => {
 		let response = [];
 		if (res.error) {
 			response.push(`Error: ${res.error}`);
@@ -370,7 +370,7 @@ async function endPrediction(interaction) {
 			status: status,
 			winning_outcome_id: winningOutcomeId
 		})
-	}).then(res => res.json()).then(res => {
+	}).then(res => res.json()).then(async res => {
 		let response = [];
 		if (res.error) {
 			response.push(`Error: ${res.error}`);
