@@ -427,7 +427,7 @@ async function getPrediction(interaction) {
 			'Authorization': `Bearer ${tokens.access_token}`,
 			'Content-Type': 'application/json'
 		}
-	}).then(res => res.json()).then(res => {
+	}).then(res => res.json()).then(async res => {
 		let response = [];
 		if (res.error) {
 			response.push(`Error: ${res.error}`);
@@ -462,11 +462,11 @@ async function getPrediction(interaction) {
 			response.push(`Ended at ${toDiscordTimestamp(data.ended_at)}`);
 			response.push(`Locked at ${toDiscordTimestamp(data.locked_at)}`);
 		}
-		interaction.editReply({
+		await interaction.editReply({
 			content: response.join("\n")
 		});
 	}).catch(async (err) => {
-		interaction.editReply({
+		await interaction.editReply({
 			content: `Error getting prediction from Twitch: ${err}`
 		});
 		await validate(false);
@@ -480,13 +480,13 @@ This section checks if there is a TOKEN secret and uses it to login if it is fou
 */
 
 function validate(openBrowser = true) {
-	return new Promise((resolve, reject) => {
-		fetch('https://id.twitch.tv/oauth2/validate', {
+	return new Promise(async (resolve, reject) => {
+		await fetch('https://id.twitch.tv/oauth2/validate', {
 			method: 'GET',
 			headers: {
 				'Authorization': `Bearer ${tokens.access_token}`
 			}
-		}).then(res => res.json()).then(async (res) => {
+		}).then(res => res.json()).then(async res => {
 			if (res.status) {
 				if (res.status == 401) {
 					console.log('Trying to refresh with the refresh token');
