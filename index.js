@@ -71,7 +71,7 @@ async function getBroadcasterId() {
 	return (await getBroadcaster()).id;
 }
 
-function buildPollChoices(create) {
+function buildPollChoices(data, create) {
 	let response = [];
 	let choices = '';
 	for (let i = 0; i < data.choices.length; i++) {
@@ -172,11 +172,12 @@ async function createPoll(interaction) {
 		if (res.error) {
 			response.push(`Error: ${res.error}`);
 			response.push(`Error-Message: ${res.message}`);
+			console.log(`Error: ${JSON.stringify(res)}`);
 		} else {
 			const data = res.data[0];
 			const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
 			response.push(`Poll \`\`${data.title}\`\` successfully started!\n`);
-			const choices = buildPollChoices(true);
+			const choices = buildPollChoices(data, true);
 			response.push(`Title: ${data.title}`);
 			response.push(`Poll-ID: ${data.id}`);
 			response.push(`Broadcaster: ${data.broadcaster_name}`);
@@ -193,7 +194,6 @@ async function createPoll(interaction) {
 		await interaction.editReply({
 			content: `Error creating Poll on Twitch: ${err}`
 		});
-		await validate(false);
 	});
 }
 
@@ -224,7 +224,7 @@ async function endPoll(interaction) {
 			let data = res.data[0];
 			const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
 			response.push(`Poll \`\`${data.title}\`\` successfully ended!`);
-			const choices = buildPollChoices(false);
+			const choices = buildPollChoices(data, false);
 			response.push(`Title: ${data.title}`);
 			response.push(`Poll-ID: ${data.id}`);
 			response.push(`Broadcaster: ${data.broadcaster_name}`);
@@ -242,7 +242,6 @@ async function endPoll(interaction) {
 		await interaction.editReply({
 			content: `Error ending Poll on Twitch: ${err}`
 		});
-		await validate(false);
 	});
 }
 
@@ -266,7 +265,7 @@ async function getPoll(interaction) {
 			let data = res.data[0];
 			const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
 			response.push(`Got Poll \`\`${data.title}\`\` successfully!`);
-			const choices = buildPollChoices(false);
+			const choices = buildPollChoices(data, false);
 			response.push(`Title: ${data.title}`);
 			response.push(`Poll-ID: ${data.id}`);
 			response.push(`Broadcaster: ${data.broadcaster_name}`);
@@ -283,7 +282,6 @@ async function getPoll(interaction) {
 		await interaction.editReply({
 			content: `Error getting Poll from Twitch: ${err}`
 		});
-		await validate(false);
 	});
 }
 
@@ -346,7 +344,6 @@ async function createPrediction(interaction) {
 		await interaction.editReply({
 			content: `Error creating prediction on Twitch: ${err}`
 		});
-		await validate(false);
 	});
 }
 
@@ -412,7 +409,6 @@ async function endPrediction(interaction) {
 		await interaction.editReply({
 			content: `Error ending prediction on Twitch: ${err}`
 		});
-		await validate(false);
 	});
 }
 
@@ -469,7 +465,6 @@ async function getPrediction(interaction) {
 		await interaction.editReply({
 			content: `Error getting prediction from Twitch: ${err}`
 		});
-		await validate(false);
 	});
 }
 
