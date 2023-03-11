@@ -202,7 +202,8 @@ async function endPoll(interaction) {
 	const broadcasterId = await getBroadcasterId();
 	const pollId = interaction.options.getString('id');
 	let status = interaction.options.getString('status');
-	status = status.substring(0, status.indexOf(' ')).trim();
+	if (status.includes(' ')) // There shouldn't be a space in the value but better safe than sorry
+		status = status.substring(0, status.indexOf(' ')).trim();
 	await fetch('https://api.twitch.tv/helix/polls', {
 		method: 'PATCH',
 		headers: {
@@ -289,7 +290,7 @@ async function getPoll(interaction) {
 async function createPrediction(interaction) {
 	const broadcasterId = await getBroadcasterId();
 	const title = interaction.options.getString('title');
-	const outcomesStr = interaction.options.getString('outcomes').split(',');
+	const outcomesStr = interaction.options.getString('outcomes').split(';');
 	let outcomesArr = [];
 	for (let i = 0; i < outcomesStr.length; i++) {
 		outcomesArr.push({
@@ -351,7 +352,8 @@ async function createPrediction(interaction) {
 async function endPrediction(interaction) {
 	const broadcasterId = await getBroadcasterId();
 	let status = interaction.options.getString('status');
-	status = status.substring(0, status.indexOf(' ')).trim();
+	if (status.includes(' ')) // There shouldn't be a space in the value but better safe than sorry
+		status = status.substring(0, status.indexOf(' ')).trim();
 	const winningOutcomeId = interaction.options.getString('winning_outcome_id') ?? undefined;
 	const predictionId = interaction.options.getString('id');
 	await fetch('https://api.twitch.tv/helix/predictions', {

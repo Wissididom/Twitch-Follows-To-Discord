@@ -39,12 +39,12 @@ client.on("ready", () => {
 				required: false,
 				choices: [
 					{
-						name: 'minutes',
-						value: 'Minutes'
+						name: 'Minutes',
+						value: 'minutes'
 					},
 					{
-						name: 'seconds',
-						value: 'Seconds'
+						name: 'Seconds',
+						value: 'seconds'
 					}
 				]
 			},
@@ -80,12 +80,12 @@ client.on("ready", () => {
 				required: true,
 				choices: [
 					{
-						name: 'terminated',
-						value: 'TERMINATED (End the poll manually, but allow it to be viewed publicly.)'
+						name: 'Terminated (End the poll manually, but allow it to be viewed publicly.)',
+						value: 'TERMINATED'
 					},
 					{
-						name: 'archived',
-						value: 'ARCHIVED (End the poll manually and do not allow it to be viewed publicly.)'
+						name: 'Archived (End the poll manually and do not allow it to be viewed publicly.)',
+						value: 'ARCHIVED'
 					}
 				]
 			}
@@ -117,7 +117,7 @@ client.on("ready", () => {
 			},
 			{
 				name: 'outcomes',
-				description: 'List of the outcomes (separated by comma, first is blue, second is pink).',
+				description: 'List of the outcomes (separated by semicolon, first is blue, second is pink).',
 				type: ApplicationCommandOptionType.String,
 				required: true
 			},
@@ -134,12 +134,12 @@ client.on("ready", () => {
 				required: false,
 				choices: [
 					{
-						name: 'minutes',
-						value: 'Minutes'
+						name: 'Minutes',
+						value: 'minutes'
 					},
 					{
-						name: 'seconds',
-						value: 'Seconds'
+						name: 'Seconds',
+						value: 'seconds'
 					}
 				]
 			}
@@ -163,22 +163,22 @@ client.on("ready", () => {
 				required: true,
 				choices: [
 					{
-						name: 'resolved',
-						value: 'RESOLVED (A winning outcome has been chosen and the Channel Points have been distributed.)'
+						name: 'Resolved (A winning outcome has been chosen and the Channel Points have been distributed.)',
+						value: 'RESOLVED'
 					},
 					{
-						name: 'canceled',
-						value: 'CANCELED (The Prediction has been canceled and the Channel Points have been refunded.)'
+						name: 'Canceled (The Prediction has been canceled and the Channel Points have been refunded.)',
+						value: 'CANCELED'
 					},
 					{
-						name: 'locked',
-						value: 'LOCKED (The Prediction has been locked and viewers can no longer make predictions.)'
+						name: 'Locked (The Prediction has been locked and viewers can no longer make predictions.)',
+						value: 'LOCKED'
 					}
 				]
 			},
 			{
 				name: 'winning_outcome_id',
-				description: 'ID of the winning outcome for the Prediction (Required if status is RESOLVED).',
+				description: 'ID of the winning outcome for the Prediction (Required if status is Resolved).',
 				type: ApplicationCommandOptionType.String,
 				required: false
 			}
