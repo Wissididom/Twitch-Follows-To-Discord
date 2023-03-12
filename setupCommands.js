@@ -10,6 +10,11 @@ client.on("ready", () => {
 	console.log(`Logged in as ${client.user.tag}!`);  // Logging
 	let promises = [];
 	promises.push(client.application?.commands?.create({
+		name: 'getpoll',
+		description: 'Get information about all polls or specific polls for a Twitch channel (available for 90 days).',
+		type: ApplicationCommandType.ChatInput
+	}));
+	promises.push(client.application?.commands?.create({
 		name: 'poll',
 		description: 'Create a poll for a specific Twitch channel.',
 		type: ApplicationCommandType.ChatInput,
@@ -68,12 +73,6 @@ client.on("ready", () => {
 		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
-				name: 'id',
-				description: 'ID of the poll.',
-				type: ApplicationCommandOptionType.String,
-				required: true
-			},
-			{
 				name: 'status',
 				description: 'The poll status to be set.',
 				type: ApplicationCommandOptionType.String,
@@ -92,17 +91,9 @@ client.on("ready", () => {
 		]
 	}));
 	promises.push(client.application?.commands?.create({
-		name: 'getpoll',
-		description: 'Get information about all polls or specific polls for a Twitch channel (available for 90 days).',
-		type: ApplicationCommandType.ChatInput,
-		options: [
-			{
-				name: 'id',
-				description: 'ID of a poll. Filters results to one or more specific polls.',
-				type: ApplicationCommandOptionType.String,
-				required: true
-			}
-		]
+		name: 'getprediction',
+		description: 'Get information about all Channel Points Predictions or specific Channel Points Predictions.',
+		type: ApplicationCommandType.ChatInput
 	}));
 	promises.push(client.application?.commands?.create({
 		name: 'prediction',
@@ -151,12 +142,6 @@ client.on("ready", () => {
 		type: ApplicationCommandType.ChatInput,
 		options: [
 			{
-				name: 'id',
-				description: 'ID of the Prediction.',
-				type: ApplicationCommandOptionType.String,
-				required: true
-			},
-			{
 				name: 'status',
 				description: 'The Prediction status to be set.',
 				type: ApplicationCommandOptionType.String,
@@ -181,19 +166,6 @@ client.on("ready", () => {
 				description: 'ID of the winning outcome for the Prediction (Required if status is Resolved).',
 				type: ApplicationCommandOptionType.String,
 				required: false
-			}
-		]
-	}));
-	promises.push(client.application?.commands?.create({
-		name: 'getprediction',
-		description: 'Get information about all Channel Points Predictions or specific Channel Points Predictions.',
-		type: ApplicationCommandType.ChatInput,
-		options: [
-			{
-				name: 'id',
-				description: 'ID of a poll. Filters results to one or more specific polls.',
-				type: ApplicationCommandOptionType.String,
-				required: true
 			}
 		]
 	}));
