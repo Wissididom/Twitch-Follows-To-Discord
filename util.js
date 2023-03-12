@@ -24,7 +24,7 @@ function buildPollChoices(data, create) {
 }
 
 function toDiscordTimestamp(twitchTime) {
-	return `<t:${Math.floor(Date.parse(twitchTime) / 1000)}>`;
+	return `<t:${Math.floor(Date.parse(twitchTime) / 1000)}:T>`;
 }
 
 module.exports.getNoAllowedChannelIdError = getNoAllowedChannelIdError;
