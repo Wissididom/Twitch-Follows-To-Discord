@@ -1,22 +1,24 @@
-const fs = require('fs');
+import * as fs from 'node:fs';
 
-const {
+import {
 	buildPollChoices,
 	toDiscordTimestamp
-} = require('./util.js');
+} from './util.js';
 
-function getStatusResponse(res) {
+import open, {openApp, apps} from 'open';
+
+async function getStatusResponse(res) {
 	switch (res.status) {
 		case 400:
-			return `Bad Request: ${json.message}`;
+			return `Bad Request: ${(await res.json()).message}`;
 		case 401:
-			return `Unauthorized: ${json.message}`;
+			return `Unauthorized: ${(await res.json()).message}`;
 		case 404:
-			return `Not Found: ${json.message}`;
+			return `Not Found: ${(await res.json()).message}`;
 		case 429:
-			return `Too Many Requests: ${json.message}`;
+			return `Too Many Requests: ${(await res.json()).message}`;
 		default:
-			return `${json.error} (${res.status}): ${json.message}`;
+			return `${(await res.json()).error} (${res.status}): ${(await res.json()).message}`;
 	}
 }
 
@@ -41,7 +43,7 @@ async function getUser(clientId, accessToken, login) {
 
 
 async function getBroadcaster(clientId, accessToken) {
-	return getUser(clientId, accessToken);
+	return await getUser(clientId, accessToken);
 }
 
 async function getBroadcasterId(clientId, accessToken) {
@@ -454,7 +456,7 @@ function getScopes() {
 }
 
 function getValidationEndpoint() {
-	return 'https://id.twitch.tv/oauth2/validate'
+	return 'https://id.twitch.tv/oauth2/validate';
 }
 
 function getRefreshEndpoint(clientId, clientSecret, refreshToken) {
@@ -469,22 +471,22 @@ function getAccessTokenByAuthTokenEndpoint(clientId, clientSecret, code, redirec
 	return `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&code=${code}&grant_type=authorization_code&redirect_uri=${encodeURIComponent(redirectUri)}%3A${port}`;
 }
 
-function validateTwitchToken(clientId, clientSecret, accessToken, refreshToken, redirectUri, openBrowser = true) {
+function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, openBrowser = true) {
 	return new Promise(async (resolve, reject) => {
 		await fetch(getValidationEndpoint(), {
 			method: 'GET',
 			headers: {
-				'Authorization': `Bearer ${accessToken}`
+				'Authorization': `Bearer ${tokens.access_token}`
 			}
 		}).then(res => res.json()).then(async res => {
 			if (res.status) {
 				if (res.status == 401) {
 					console.log('Trying to refresh with the refresh token');
-					await fetch(getRefreshEndpoint(clientId, clientSecret, refreshToken), {
+					await fetch(getRefreshEndpoint(clientId, clientSecret, tokens.refresh_token), {
 						method: 'POST',
 						headers: {
 							'Client-ID': clientId,
-							'Authorization': `Bearer ${accessToken}`
+							'Authorization': `Bearer ${tokens.access_token}`
 						}
 					}).then(res => res.json()).then(res => {
 						if (res.status) {
@@ -493,7 +495,7 @@ function validateTwitchToken(clientId, clientSecret, accessToken, refreshToken, 
 							console.log(`Error-Message: ${res.message}`);
 							console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes())}`);
 							if (openBrowser)
-								require('open')(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
+								open(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
 						} else {
 							tokens = res;
 							fs.writeFileSync('./.tokens.json', JSON.stringify(res));
@@ -505,7 +507,7 @@ function validateTwitchToken(clientId, clientSecret, accessToken, refreshToken, 
 						console.error(err);
 						console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes())}`);
 						if (openBrowser)
-							require('open')(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
+							open(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
 					});
 				} else {
 					console.log(`Status: ${res.status}`);
@@ -527,20 +529,22 @@ function validateTwitchToken(clientId, clientSecret, accessToken, refreshToken, 
 	});
 }
 
-module.exports.getUser = getUser;
-module.exports.getBroadcaster = getBroadcaster;
-module.exports.getBroadcasterId = getBroadcasterId;
-module.exports.getPoll = getPoll;
-module.exports.getPollId = getPollId;
-module.exports.createPoll = createPoll;
-module.exports.endPoll = endPoll;
-module.exports.getPrediction = getPrediction;
-module.exports.getPredictionId = getPredictionId;
-module.exports.createPrediction = createPrediction;
-module.exports.endPrediction = endPrediction;
-module.exports.getScopes = getScopes;
-module.exports.getValidationEndpoint = getValidationEndpoint;
-module.exports.getRefreshEndpoint = getRefreshEndpoint;
-module.exports.getAuthorizationEndpoint = getAuthorizationEndpoint;
-module.exports.getAccessTokenByAuthTokenEndpoint = getAccessTokenByAuthTokenEndpoint;
-module.exports.validateTwitchToken = validateTwitchToken;
+export {
+	getUser,
+	getBroadcaster,
+	getBroadcasterId,
+	getPoll,
+	getPollId,
+	createPoll,
+	endPoll,
+	getPrediction,
+	getPredictionId,
+	createPrediction,
+	endPrediction,
+	getScopes,
+	getValidationEndpoint,
+	getRefreshEndpoint,
+	getAuthorizationEndpoint,
+	getAccessTokenByAuthTokenEndpoint,
+	validateTwitchToken
+};

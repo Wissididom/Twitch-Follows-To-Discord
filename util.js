@@ -27,7 +27,4 @@ function toDiscordTimestamp(twitchTime) {
 	return `<t:${Math.floor(Date.parse(twitchTime) / 1000)}:T>`;
 }
 
-module.exports.getNoAllowedChannelIdError = getNoAllowedChannelIdError;
-module.exports.getChannelNotAllowedError = getChannelNotAllowedError;
-module.exports.buildPollChoices = buildPollChoices;
-module.exports.toDiscordTimestamp = toDiscordTimestamp;
+export { getNoAllowedChannelIdError, getChannelNotAllowedError, buildPollChoices, toDiscordTimestamp };

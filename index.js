@@ -1,19 +1,20 @@
-/*
-LIBRARIES
-*/
+import * as dotenv from 'dotenv';
 
-require('dotenv').config();
+import {
+	Client,
+	GatewayIntentBits,
+	Partials
+} from 'discord.js';
+import express from 'express';
+import * as fs from 'node:fs';
+import open, {openApp, apps} from 'open';
 
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
-const express = require('express');
-const fs = require('fs');
-
-const {
+import {
 	getNoAllowedChannelIdError,
 	getChannelNotAllowedError
-} = require('./util.js');
+} from './util.js';
 
-const {
+import {
 	getBroadcasterId,
 	getPoll,
 	getPollId,
@@ -27,7 +28,9 @@ const {
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
 	validateTwitchToken
-} = require('./twitchApi.js');
+} from './twitchApi.js';
+
+dotenv.config();
 
 /*
 OBJECTS, TOKENS, GLOBAL VARIABLES
@@ -48,7 +51,7 @@ const client = new Client({
 	]
 });
 
-const mySecret = process.env['DISCORD_TOKEN'];  // Discord Token
+const mySecret = process.env.DISCORD_TOKEN;
 
 let tokens = {
 	access_token: 'N/A',
@@ -72,22 +75,22 @@ client.on("interactionCreate", async interaction => {
 });
 
 async function handleCommand(interaction) {
-	if (!process.env['ALLOWED_CHANNEL_ID']) {
+	if (!process.env.ALLOWED_CHANNEL_ID) {
 		await interaction.reply({
 			content: getNoAllowedChannelIdError(interaction.channel),
-			ephemeral: process.env['EPHEMERAL'] == 'true'
+			ephemeral: process.env.EPHEMERAL == 'true'
 		});
 		return;
 	}
-	if (interaction.channel.id != process.env['ALLOWED_CHANNEL_ID']) {
+	if (interaction.channel.id != process.env.ALLOWED_CHANNEL_ID) {
 		await interaction.reply({
 			content: getChannelNotAllowedError(interaction.channel),
-			ephemeral: process.env['EPHEMERAL'] == 'true'
+			ephemeral: process.env.EPHEMERAL == 'true'
 		});
 		return;
 	}
 	await interaction.deferReply();
-	await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens.access_token, tokens.refresh_token, false).then(async (value) => {
+	await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
 		switch (interaction.commandName) {
 			case 'getpoll':
 				await getPollCommand(interaction);
@@ -241,12 +244,6 @@ async function endPredictionCommand(interaction) {
 	});
 }
 
-/*
-BOT START CODE (login, start server, etc)
-
-This section checks if there is a TOKEN secret and uses it to login if it is found. If not, the bot outputs a log to the console and terminates.
-*/
-
 const server = express();
 server.all('/', async (req, res) => {
 	const authObj = await fetch(getAccessTokenByAuthTokenEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, req.query.code, 'http://localhost', process.env.LOCAL_SERVER_PORT), {
@@ -265,7 +262,7 @@ server.listen(parseInt(process.env.LOCAL_SERVER_PORT), () => {
 	console.log('Express Server ready!');
 	if (!fs.existsSync('./.tokens.json')) {
 		console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
-		require('open')(getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes()));
+		open(getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes()));
 	}
 });
 if (!mySecret) {
@@ -273,8 +270,8 @@ if (!mySecret) {
 	process.kill(process.pid, 'SIGTERM');  // Kill Bot
 } else {
 	if (fs.existsSync('./.tokens.json')) {
-		tokens = require('./.tokens.json');
-		validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens.access_token, tokens.refresh_token, 'http://localhost').then(() => {
+		tokens = JSON.parse(fs.readFileSync('./.tokens.json', {encoding: 'utf8', flag: 'r'}));
+		validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT).then(() => {
 			// Logs in with secret TOKEN
 			client.login(mySecret);
 		}).catch(() => {

@@ -1,9 +1,31 @@
-require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, ApplicationCommandType, ApplicationCommandOptionType } = require('discord.js');
+import * as dotenv from 'dotenv';
 
-const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessages], partials: [Partials.User, Partials.Channel, Partials.GuildMember, Partials.Message, Partials.Reaction]});
+import {
+	Client,
+	GatewayIntentBits,
+	Partials,
+	ApplicationCommandType,
+	ApplicationCommandOptionType
+} from 'discord.js';
 
-const mySecret = process.env['DISCORD_TOKEN'];  // Discord Token
+dotenv.config();
+
+const client = new Client({
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.DirectMessages
+	],
+	partials: [
+		Partials.User,
+		Partials.Channel,
+		Partials.GuildMember,
+		Partials.Message,
+		Partials.Reaction
+	]
+});
+
+const mySecret = process.env.DISCORD_TOKEN;
 
 // Outputs console log when bot is logged in and registers all commands
 client.on("ready", () => {
@@ -169,16 +191,10 @@ client.on("ready", () => {
 			}
 		]
 	}));
-	Promise.all(promises).then(reolvedPromises => {
+	Promise.all(promises).then((/*resolvedPromises*/) => {
 		process.kill(process.pid, 'SIGTERM'); // Kill Bot
 	});
 });
-
-/*
-BOT START CODE (login, start server, etc)
-
-This section checks if there is a TOKEN secret and uses it to login if it is found. If not, the bot outputs a log to the console and terminates.
-*/
 
 if (!mySecret) {
 	console.log("TOKEN not found! You must setup the Discord TOKEN as per the README file before running this bot.");
