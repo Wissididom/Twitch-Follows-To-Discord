@@ -16,7 +16,6 @@ function buildPollChoices(data, create) {
 		if (!create) {
 			response.push(`> > Votes: ${choice.votes}`);
 			response.push(`> > Channel Points Votes: ${choice.channel_points_votes}`);
-			response.push(`> > Bits Votes: ${choice.bits_votes}\n`);
 		}
 	}
 	choices = choices.trim();
@@ -27,4 +26,9 @@ function toDiscordTimestamp(twitchTime) {
 	return `<t:${Math.floor(Date.parse(twitchTime) / 1000)}:T>`;
 }
 
-export { getNoAllowedChannelIdError, getChannelNotAllowedError, buildPollChoices, toDiscordTimestamp };
+export {
+	getNoAllowedChannelIdError,
+	getChannelNotAllowedError,
+	buildPollChoices,
+	toDiscordTimestamp
+};

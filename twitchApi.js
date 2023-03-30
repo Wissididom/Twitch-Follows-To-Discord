@@ -172,6 +172,7 @@ async function createPoll(clientId, accessToken, broadcasterId, title, choices, 
 				response.push(`Broadcaster: ${data.broadcaster_name}`);
 				response.push(`Choices:\n${choices}`);
 				response.push(`Channel Points Voting ${channelPointsVoting}`);
+				response.push(`Channel Points Per Vote ${data.channel_points_per_vote}`);
 				response.push(`Poll Status: ${data.status}`);
 				response.push(`Poll Duration: ${data.duration} seconds`);
 				response.push(`Started At: ${toDiscordTimestamp(data.started_at)}`);
@@ -223,6 +224,7 @@ async function endPoll(clientId, accessToken, broadcasterId, pollId, status) {
 				response.push(`Broadcaster: ${data.broadcaster_name}`);
 				response.push(`Choices:\n${choices}`);
 				response.push(`Channel Points Voting ${channelPointsVoting}`);
+				response.push(`Channel Points Per Vote ${data.channel_points_per_vote}`);
 				response.push(`Poll Status: ${data.status}`);
 				response.push(`Poll Duration: ${data.duration} seconds`);
 				response.push(`Started at ${toDiscordTimestamp(data.started_at)}`);
