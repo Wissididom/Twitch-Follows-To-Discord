@@ -72,7 +72,23 @@ async function getChannelFollowers(clientId, accessToken, broadcasterId, paginat
 			if (json.error) {
 				resolve(`Error: ${json.error}\nError-Message: ${json.message}`);
 			} else {
-				// TODO
+				let result = {
+					total: json.total,
+					followers: []
+				};
+				if (json.data) {
+					result.data = json.data;
+				}
+				let pagination = json.pagination;
+				if (pagination.cursor) {
+					let followers = await getChannelFollowers(clientId, accessToken, broadcasterId, pagination.cursor);
+					if (followers.data) {
+						for (let follower of followers.data) {
+							result.data.push(follower);
+						}
+					}
+				}
+				resolve(result);
 			}
 		} catch (e) {
 			reject(e);
