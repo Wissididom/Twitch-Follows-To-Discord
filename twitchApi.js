@@ -50,11 +50,17 @@ async function getBroadcasterId(clientId, accessToken) {
 	return (await getBroadcaster(clientId, accessToken)).id;
 }
 
-// https://dev.twitch.tv/docs/api/reference#get-polls
-async function getPoll(clientId, accessToken, broadcasterId) {
+// https://dev.twitch.tv/docs/api/reference/#get-channel-followers
+async function getChannelFollowers(clientId, accessToken, broadcasterId, paginationCursor = null) {
+	let apiUrl;
+	if (paginationCursor) {
+		apiUrl = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100&after=${paginationCursor}`;
+	} else {
+		apiUrl = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100`;
+	}
 	return new Promise(async (resolve, reject) => {
 		try {
-			const res = await fetch(`https://api.twitch.tv/helix/polls?broadcaster_id=${broadcasterId}`, {
+			const res = await fetch(apiUrl, {
 				method: 'GET',
 				headers: {
 					'Client-ID': clientId,
@@ -69,378 +75,10 @@ async function getPoll(clientId, accessToken, broadcasterId) {
 			}
 			let response = [];
 			if (json.error) {
-				response.push(`Error: ${json.error}`);
-				response.push(`Error-Message: ${json.message}`);
+				resolve(`Error: ${json.error}\nError-Message: ${json.message}`);
 			} else {
-				if (json.data.length < 1) {
-					resolve('No Poll found');
-					return;
-				}
-				let data = json.data[0];
-				const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
-				response.push(`Got Poll \`\`${data.title}\`\` successfully!`);
-				const choices = buildPollChoices(data, false);
-				response.push(`Title: ${data.title}`);
-				response.push(`Poll-ID: ${data.id}`);
-				response.push(`Broadcaster: ${data.broadcaster_name}`);
-				response.push(`Choices:\n${choices}`);
-				response.push(`Channel Points Voting ${channelPointsVoting}`);
-				response.push(`Poll Status: ${data.status}`);
-				response.push(`Poll Duration: ${data.duration} seconds`);
-				response.push(`Started at ${toDiscordTimestamp(data.started_at)}`);
+				// TODO
 			}
-			resolve(response.join("\n"));
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
-// https://dev.twitch.tv/docs/api/reference#get-polls
-async function getPollId(clientId, accessToken, broadcasterId) {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch(`https://api.twitch.tv/helix/polls?broadcaster_id=${broadcasterId}`, {
-				method: 'GET',
-				headers: {
-					'Client-ID': clientId,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				}
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res));
-				return;
-			}
-			if (json.error) {
-				reject(`Error: ${json.error}; Error-Message: ${json.message}`);
-			} else {
-				if (json.data.length < 1) {
-					reject('No Poll found');
-					return;
-				}
-				resolve(json.data[0].id);
-			}
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
-// https://dev.twitch.tv/docs/api/reference#create-poll
-async function createPoll(clientId, accessToken, broadcasterId, title, choices, duration, channelPointsVotingEnabled, channelPointsPerVote) {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch('https://api.twitch.tv/helix/polls', {
-				method: 'POST',
-				headers: {
-					'Client-ID': clientId,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					broadcaster_id: broadcasterId,
-					title,
-					choices,
-					duration,
-					channel_points_voting_enabled: channelPointsVotingEnabled,
-					channel_points_per_vote: channelPointsPerVote
-				})
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res));
-				return;
-			}
-			const response = [];
-			if (json.error) {
-				response.push(`Error: ${json.error}`);
-				response.push(`Error-Message: ${json.message}`);
-				console.log(`Error: ${JSON.stringify(json)}`);
-			} else {
-				if (json.data.length < 1) {
-					resolve('No Poll created');
-					return;
-				}
-				const data = json.data[0];
-				const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
-				response.push(`Poll \`\`${data.title}\`\` successfully started!\n`);
-				const choices = buildPollChoices(data, true);
-				response.push(`Title: ${data.title}`);
-				response.push(`Poll-ID: ${data.id}`);
-				response.push(`Broadcaster: ${data.broadcaster_name}`);
-				response.push(`Choices:\n${choices}`);
-				response.push(`Channel Points Voting ${channelPointsVoting}`);
-				response.push(`Channel Points Per Vote ${data.channel_points_per_vote}`);
-				response.push(`Poll Status: ${data.status}`);
-				response.push(`Poll Duration: ${data.duration} seconds`);
-				response.push(`Started At: ${toDiscordTimestamp(data.started_at)}`);
-			}
-			resolve(response.join("\n"));
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
-// https://dev.twitch.tv/docs/api/reference#end-poll
-async function endPoll(clientId, accessToken, broadcasterId, pollId, status) {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch('https://api.twitch.tv/helix/polls', {
-				method: 'PATCH',
-				headers: {
-					'Client-ID': clientId,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					broadcaster_id: broadcasterId,
-					id: pollId,
-					status
-				})
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res));
-				return;
-			}
-			let response = [];
-			if (json.error) {
-				response.push(`Error: ${json.error}`);
-				response.push(`Error-Message: ${json.message}`);
-			} else {
-				if (json.data.length < 1) {
-					resolve('Poll not found');
-					return;
-				}
-				let data = json.data[0];
-				const channelPointsVoting = data.channel_points_voting_enabled ? 'enabled' : 'disabled';
-				response.push(`Poll \`\`${data.title}\`\` successfully ended!`);
-				const choices = buildPollChoices(data, false);
-				response.push(`Title: ${data.title}`);
-				response.push(`Poll-ID: ${data.id}`);
-				response.push(`Broadcaster: ${data.broadcaster_name}`);
-				response.push(`Choices:\n${choices}`);
-				response.push(`Channel Points Voting ${channelPointsVoting}`);
-				response.push(`Channel Points Per Vote ${data.channel_points_per_vote}`);
-				response.push(`Poll Status: ${data.status}`);
-				response.push(`Poll Duration: ${data.duration} seconds`);
-				response.push(`Started at ${toDiscordTimestamp(data.started_at)}`);
-				response.push(`Ended at ${toDiscordTimestamp(data.ended_at)}`);
-			}
-			resolve(response.join("\n"));
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
-// https://dev.twitch.tv/docs/api/reference#get-predictions
-async function getPrediction(clientId, accessToken, broadcasterId) {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch(`https://api.twitch.tv/helix/predictions?broadcaster_id=${broadcasterId}`, {
-				method: 'GET',
-				headers: {
-					'Client-ID': clientId,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				}
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res));
-				return;
-			}
-			let response = [];
-			if (json.error) {
-				response.push(`Error: ${json.error}`);
-				response.push(`Error-Message: ${json.message}`);
-			} else {
-				if (json.data.length < 1) {
-					resolve('No Prediction found');
-					return;
-				}
-				let data = json.data[0];
-				response.push(`Got Prediction \`\`${data.title}\`\` successfully!`);
-				let outcomes = [];
-				for (let i = 0; i < data.outcomes.length; i++) {
-					let outcome = data.outcomes[i];
-					outcomes.push(`> ${outcome.title}`);
-					outcomes.push(`> > Outcome-ID: ${outcome.id}`);
-					outcomes.push(`> > Users: ${outcome.users}`);
-					outcomes.push(`> > Channel Points: ${outcome.channel_points}`);
-					outcomes.push(`> > Color: ${outcome.color}`);
-					outcomes.push('> > Top Predictors:');
-					for (let j = 0; outcome.top_predictors && j < outcome.top_predictors.length; j++) {
-						let topPredictor = outcome.top_predictors[j].user;
-						outcomes.push(`> > > User: ${topPredictor.name} (${topPredictor.id})`);
-						outcomes.push(`> > > > Channel Points used: ${topPredictor.channel_points_used}`);
-						outcomes.push(`> > > > Channel Points won: ${topPredictor.channel_points_won}`);
-					}
-				}
-				outcomes = outcomes.join("\n").trim();
-				response.push(`Title: ${data.title}`);
-				response.push(`Prediction-ID: ${data.id}`);
-				response.push(`Broadcaster: ${data.broadcaster_name}`);
-				response.push(`Outcomes:\n${outcomes}`);
-				response.push(`Prediction Duration: ${data.prediction_window} seconds`);
-				response.push(`Prediction-Status: ${data.status}`);
-				response.push(`Created at ${toDiscordTimestamp(data.created_at)}`);
-				response.push(`Ended at ${toDiscordTimestamp(data.ended_at)}`);
-				response.push(`Locked at ${toDiscordTimestamp(data.locked_at)}`);
-			}
-			resolve(response.join("\n"));
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
-// https://dev.twitch.tv/docs/api/reference#get-predictions
-async function getPredictionId(clientId, accessToken, broadcasterId) {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch(`https://api.twitch.tv/helix/predictions?broadcaster_id=${broadcasterId}`, {
-				method: 'GET',
-				headers: {
-					'Client-ID': clientId,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				}
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res));
-				return;
-			}
-			if (json.error) {
-				reject(`Error: ${json.error}; Error-Message: ${json.message}`);
-			} else {
-				if (json.data.length < 1) {
-					reject('No Prediction found');
-					return;
-				}
-				resolve(json.data[0].id);
-			}
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
-// https://dev.twitch.tv/docs/api/reference#create-prediction
-async function createPrediction(clientId, accessToken, broadcasterId, title, outcomes, predictionWindow) {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch('https://api.twitch.tv/helix/predictions', {
-				method: 'POST',
-				headers: {
-					'Client-ID': clientId,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					broadcaster_id: broadcasterId,
-					title,
-					outcomes,
-					prediction_window: predictionWindow
-				})
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res));
-				return;
-			}
-			let response = [];
-			if (json.error) {
-				response.push(`Error: ${json.error}`);
-				response.push(`Error-Message: ${json.message}`);
-			} else {
-				let data = json.data[0];
-				response.push(`Prediction \`\`${data.title}\`\` successfully started!`);
-				let outcomes = [];
-				for (let i = 0; i < data.outcomes.length; i++) {
-					let outcome = data.outcomes[i];
-					outcomes.push(`> ${outcome.title}`);
-					outcomes.push(`> > Outcome-ID: ${outcome.id}`);
-					outcomes.push(`> > Outcome-Color: ${outcome.color}`);
-				}
-				response.push(`Title: ${data.title}`);
-				response.push(`Prediction-ID: ${data.id}`);
-				response.push(`Broadcaster: ${data.broadcaster_name}`);
-				response.push(`Outcomes:\n${outcomes.join("\n")}`);
-				response.push(`Prediction Window: ${data.prediction_window} seconds`);
-				response.push(`Prediction Status: ${data.status}`);
-				response.push(`Created At: ${toDiscordTimestamp(data.created_at)}`);
-			}
-			resolve(response.join("\n"));
-		} catch (e) {
-			reject(e);
-		}
-	});
-}
-
-// https://dev.twitch.tv/docs/api/reference#end-prediction
-async function endPrediction(clientId, accessToken, broadcasterId, predictionId, status, winningOutcomeId) {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch('https://api.twitch.tv/helix/predictions', {
-				method: 'PATCH',
-				headers: {
-					'Client-ID': process.env.TWITCH_CLIENT_ID,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					broadcaster_id: broadcasterId,
-					id: predictionId,
-					status: status,
-					winning_outcome_id: winningOutcomeId
-				})
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res));
-				return;
-			}
-			let response = [];
-			if (json.error) {
-				response.push(`Error: ${json.error}`);
-				response.push(`Error-Message: ${json.message}`);
-			} else {
-				let data = json.data[0];
-				response.push(`Prediction \`\`${data.title}\`\` successfully ended!`);
-				let outcomes = [];
-				for (let i = 0; i < data.outcomes.length; i++) {
-					let outcome = data.outcomes[i];
-					outcomes.push(`> ${outcome.title}`);
-					outcomes.push(`> > Outcome-ID: ${outcome.id}`);
-					outcomes.push(`> > Users: ${outcome.users}`);
-					outcomes.push(`> > Channel Points: ${outcome.channel_points}`);
-					outcomes.push(`> > Color: ${outcome.color}`);
-					outcomes.push('> > Top Predictors:');
-					for (let j = 0; outcome.top_predictors && j < outcome.top_predictors.length; j++) {
-						let topPredictor = outcome.top_predictors[j].user;
-						outcomes.push(`> > > User: ${topPredictor.name} (${topPredictor.id})`);
-						outcomes.push(`> > > > Channel Points used: ${topPredictor.channel_points_used}`);
-						outcomes.push(`> > > > Channel Points won: ${topPredictor.channel_points_won}\n`);
-					}
-				}
-				outcomes = outcomes.join("\n").trim();
-				response.push(`Title: ${data.title}`);
-				response.push(`Prediction-ID: ${data.id}`);
-				response.push(`Broadcaster: ${data.broadcaster_name}`);
-				response.push(`Outcomes:\n${outcomes}`);
-				response.push(`Prediction Window: ${data.prediction_window} seconds\n`);
-				response.push(`Prediction-Status: ${data.status}`);
-				response.push(`Created at ${toDiscordTimestamp(data.created_at)}`);
-				response.push(`Ended at ${toDiscordTimestamp(data.ended_at)}`);
-				response.push(`Locked at ${toDiscordTimestamp(data.locked_at)}`);
-			}
-			resolve(response.join("\n"));
 		} catch (e) {
 			reject(e);
 		}
@@ -449,10 +87,7 @@ async function endPrediction(clientId, accessToken, broadcasterId, predictionId,
 
 function getScopes() {
 	const scopes = [
-		'channel:read:polls',
-		'channel:read:predictions',
-		'channel:manage:polls',
-		'channel:manage:predictions'
+		'moderator:read:followers'
 	];
 	return scopes.join(' ');
 }
@@ -535,14 +170,7 @@ export {
 	getUser,
 	getBroadcaster,
 	getBroadcasterId,
-	getPoll,
-	getPollId,
-	createPoll,
-	endPoll,
-	getPrediction,
-	getPredictionId,
-	createPrediction,
-	endPrediction,
+	getChannelFollowers,
 	getScopes,
 	getValidationEndpoint,
 	getRefreshEndpoint,
