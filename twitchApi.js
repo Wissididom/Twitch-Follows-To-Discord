@@ -1,10 +1,5 @@
 import * as fs from 'node:fs';
 
-import {
-	buildPollChoices,
-	toDiscordTimestamp
-} from './util.js';
-
 import open, {openApp, apps} from 'open';
 
 async function getStatusResponse(res) {
