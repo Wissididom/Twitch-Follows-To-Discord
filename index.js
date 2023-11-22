@@ -25,8 +25,28 @@ let tokens = {
 		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
 			const broadcasterId = await getBroadcasterId(process.env.TWITCH_CLIENT_ID, tokens.access_token);
 			await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, broadcasterId).then(async followers => {
+				let lastFollowerList = JSON.parse(fs.readFileSync('.lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
+				let followersToSkip = [];
+				for (let follower of followers.followers) {
+					if (lastFollowerList.followers.find(item => {
+						return item.user_id == follower.user_id;
+					})) { // Follower in both lists
+						followersToSkip.push(follower.user_id);
+					} else {
+						// Follower only in new list, aka. channel.follow TODO: Send to Discord Webhook
+					}
+				}
+				for (let follower of lastFollowerList.followers) {
+					if (followersToSkip.includes(follower.user_id)) continue; // Skip followers that are in both lists
+					if (followers.followers.find(item => {
+						return item.user_id == follower.user_id;
+					})) { // Follower in both lists (shouldn't happen because of followersToSkip handling)
+						followersToSkip.push(follower.user_id);
+					} else {
+						// Follower only in old list, aka. channel.unfollow TODO: Send to Discord Webhook
+					}
+				}
 				fs.writeFileSync('lastFollowerList.json', JSON.stringify(followers, null, 4));
-				// TODO: Compare with last file and save if there are differences
 			}).catch(async err => {
 				console.log(err);
 			});
