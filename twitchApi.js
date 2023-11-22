@@ -77,14 +77,14 @@ async function getChannelFollowers(clientId, accessToken, broadcasterId, paginat
 					followers: []
 				};
 				if (json.data) {
-					result.data = json.data;
+					result.followers = json.data;
 				}
 				let pagination = json.pagination;
 				if (pagination.cursor) {
 					let followers = await getChannelFollowers(clientId, accessToken, broadcasterId, pagination.cursor);
 					if (followers.data) {
 						for (let follower of followers.data) {
-							result.data.push(follower);
+							result.followers.push(follower);
 						}
 					}
 				}
@@ -146,7 +146,7 @@ function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, 
 								open(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
 						} else {
 							tokens = res;
-							fs.writeFileSync('./.tokens.json', JSON.stringify(res));
+							fs.writeFileSync('.tokens.json', JSON.stringify(res));
 							console.log('Tokens saved!');
 							resolve('Tokens successfully refreshed!');
 						}
