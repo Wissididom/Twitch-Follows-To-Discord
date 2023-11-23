@@ -71,8 +71,8 @@ async function getChannelFollowers(clientId, accessToken, broadcasterId, paginat
 				let pagination = json.pagination;
 				if (pagination.cursor) {
 					let followers = await getChannelFollowers(clientId, accessToken, broadcasterId, pagination.cursor);
-					if (followers.data) {
-						for (let follower of followers.data) {
+					if (followers.followers) {
+						for (let follower of followers.followers) {
 							result.followers.push(follower);
 						}
 					}
