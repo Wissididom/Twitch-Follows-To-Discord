@@ -1,8 +1,7 @@
 import * as dotenv from 'dotenv';
 
 import express from 'express';
-import * as fs from 'node:fs';
-import open, {openApp, apps} from 'open';
+import * as fs from 'fs';
 
 import {
 	getBroadcasterId,
