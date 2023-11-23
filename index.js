@@ -25,7 +25,11 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 	setInterval(async () => { // Run every second
 		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
 			await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, process.env.BROADCASTER_ID).then(async followers => {
-				let lastFollowerList = JSON.parse(fs.readFileSync('.lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
+				if (!fs.existsSync('lastFollowerList.json')) {
+					fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
+					return; // Don't need to compare lists if the old list doesn't exist yet
+				} 
+				let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
 				let followersToSkip = [];
 				for (let follower of followers.followers) {
 					if (lastFollowerList.followers.find(item => {
@@ -41,7 +45,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 								"Content-Type": "application/json"
 							},
 							body: JSON.stringify({
-								content: `User Followed!\nDisplay-Name: ${follower.user_name}\nUser-Name: ${follower.user_login}\nUser-ID: ${follower.user_id}`,
+								content: `**User Followed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
 								allowed_mentions: [] // Do not allow any kind of pings
 							})
 						});
@@ -62,13 +66,13 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 								"Content-Type": "application/json"
 							},
 							body: JSON.stringify({
-								content: `User Unfollowed!\nDisplay-Name: ${follower.user_name}\nUser-Name: ${follower.user_login}\nUser-ID: ${follower.user_id}`,
+								content: `**User Unfollowed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
 								allowed_mentions: [] // Do not allow any kind of pings
 							})
 						});
 					}
 				}
-				fs.writeFileSync('lastFollowerList.json', JSON.stringify(followers, null, 4));
+				fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
 			}).catch(async err => {
 				console.log(err);
 			});
@@ -88,7 +92,7 @@ server.all('/', async (req, res) => {
 	}).then(res => res.json()).catch(err => console.error);
 	if (authObj.access_token) {
 		tokens = authObj;
-		fs.writeFileSync('.tokens.json', JSON.stringify(authObj));
+		fs.writeFileSync('.tokens.json', `${JSON.stringify(authObj)}\n`);
 		res.send('<html>Tokens saved!</html>');
 		console.log('Tokens saved!');
 	} else { 

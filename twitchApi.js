@@ -2,18 +2,18 @@ import * as fs from 'node:fs';
 
 import open, {openApp, apps} from 'open';
 
-async function getStatusResponse(res) {
+function getStatusResponse(res, json) {
 	switch (res.status) {
 		case 400:
-			return `Bad Request: ${(await res.json()).message}`;
+			return `Bad Request: ${json.message}`;
 		case 401:
-			return `Unauthorized: ${(await res.json()).message}`;
+			return `Unauthorized: ${json.message}`;
 		case 404:
-			return `Not Found: ${(await res.json()).message}`;
+			return `Not Found: ${json.message}`;
 		case 429:
-			return `Too Many Requests: ${(await res.json()).message}`;
+			return `Too Many Requests: ${json.message}`;
 		default:
-			return `${(await res.json()).error} (${res.status}): ${(await res.json()).message}`;
+			return `${json.error} (${res.status}): ${json.message}`;
 	}
 }
 
@@ -55,10 +55,9 @@ async function getChannelFollowers(clientId, accessToken, broadcasterId, paginat
 			});
 			const json = await res.json();
 			if (!res.ok) {
-				resolve(getStatusResponse(res));
+				resolve(getStatusResponse(res, json));
 				return;
 			}
-			let response = [];
 			if (json.error) {
 				resolve(`Error: ${json.error}\nError-Message: ${json.message}`);
 			} else {
