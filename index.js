@@ -4,7 +4,6 @@ import express from 'express';
 import * as fs from 'fs';
 
 import {
-	getBroadcasterId,
 	getChannelFollowers,
 	getScopes,
 	getAuthorizationEndpoint,
@@ -19,11 +18,13 @@ let tokens = {
 	refresh_token: 'N/A'
 };
 
+const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == 'true';
+const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
+
 (async () =>{
 	setInterval(async () => { // Run every second
 		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
-			const broadcasterId = await getBroadcasterId(process.env.TWITCH_CLIENT_ID, tokens.access_token);
-			await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, broadcasterId).then(async followers => {
+			await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, process.env.BROADCASTER_ID).then(async followers => {
 				let lastFollowerList = JSON.parse(fs.readFileSync('.lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
 				let followersToSkip = [];
 				for (let follower of followers.followers) {
@@ -32,7 +33,18 @@ let tokens = {
 					})) { // Follower in both lists
 						followersToSkip.push(follower.user_id);
 					} else {
-						// Follower only in new list, aka. channel.follow TODO: Send to Discord Webhook
+						// Follower only in new list, aka. channel.follow
+						if (!INCLUDE_FOLLOWS) continue;
+						await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`,{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json"
+							},
+							body: JSON.stringify({
+								content: `User Followed!\nDisplay-Name: ${follower.user_name}\nUser-Name: ${follower.user_login}\nUser-ID: ${follower.user_id}`,
+								allowed_mentions: [] // Do not allow any kind of pings
+							})
+						});
 					}
 				}
 				for (let follower of lastFollowerList.followers) {
@@ -42,7 +54,18 @@ let tokens = {
 					})) { // Follower in both lists (shouldn't happen because of followersToSkip handling)
 						followersToSkip.push(follower.user_id);
 					} else {
-						// Follower only in old list, aka. channel.unfollow TODO: Send to Discord Webhook
+						// Follower only in old list, aka. channel.unfollow
+						if (!INCLUDE_UNFOLLOWS) continue;
+						await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`,{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json"
+							},
+							body: JSON.stringify({
+								content: `User Unfollowed!\nDisplay-Name: ${follower.user_name}\nUser-Name: ${follower.user_login}\nUser-ID: ${follower.user_id}`,
+								allowed_mentions: [] // Do not allow any kind of pings
+							})
+						});
 					}
 				}
 				fs.writeFileSync('lastFollowerList.json', JSON.stringify(followers, null, 4));

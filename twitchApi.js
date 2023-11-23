@@ -35,16 +35,6 @@ async function getUser(clientId, accessToken, login) {
 	}
 }
 
-
-
-async function getBroadcaster(clientId, accessToken) {
-	return await getUser(clientId, accessToken);
-}
-
-async function getBroadcasterId(clientId, accessToken) {
-	return (await getBroadcaster(clientId, accessToken)).id;
-}
-
 // https://dev.twitch.tv/docs/api/reference/#get-channel-followers
 async function getChannelFollowers(clientId, accessToken, broadcasterId, paginationCursor = null) {
 	let apiUrl;
@@ -179,8 +169,6 @@ function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, 
 
 export {
 	getUser,
-	getBroadcaster,
-	getBroadcasterId,
 	getChannelFollowers,
 	getScopes,
 	getValidationEndpoint,
