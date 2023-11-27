@@ -43,7 +43,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 							"Content-Type": "application/json"
 						},
 						body: JSON.stringify({
-							content: `**User Followed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
+							content: `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\``,
 							allowed_mentions: [] // Do not allow any kind of pings
 						})
 					});
@@ -64,7 +64,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 							"Content-Type": "application/json"
 						},
 						body: JSON.stringify({
-							content: `**User Unfollowed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
+							content: `**User Unfollowed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\``,
 							allowed_mentions: [] // Do not allow any kind of pings
 						})
 					});
