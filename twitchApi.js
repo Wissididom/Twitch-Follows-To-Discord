@@ -128,8 +128,7 @@ function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, 
 					}).then(res => res.json()).then(res => {
 						if (res.status) {
 							console.log('Failed to refresh the token! Try to reauthenticate!');
-							console.log(`Status: ${res.status}`);
-							console.log(`Error-Message: ${res.message}`);
+							console.log(`Status: ${res.status}; Error-Message: ${res.message}`);
 							console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes())}`);
 							if (openBrowser)
 								open(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
@@ -153,11 +152,7 @@ function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, 
 				}
 			} else {
 				console.log('Validating...');
-				console.log(`Client-ID: ${res.client_id}`);
-				console.log(`Login-Name: ${res.login}`);
-				console.log(`Scopes: ${res.scopes.join(', ')}`);
-				console.log(`User-ID: ${res.user_id}`);
-				console.log(`Expires in: ${res.expires_in} seconds`);
+				console.log(`Client-ID: ${res.client_id}; Login-Name: ${res.login}; Scopes: ${res.scopes.join(', ')}; User-ID: ${res.user_id}; Expires in: ${res.expires_in} seconds`);
 				resolve('Successfully validated!');
 			}
 		}).catch(err => {
