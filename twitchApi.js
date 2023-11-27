@@ -108,56 +108,53 @@ function getAccessTokenByAuthTokenEndpoint(clientId, clientSecret, code, redirec
 	return `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&code=${code}&grant_type=authorization_code&redirect_uri=${encodeURIComponent(redirectUri)}%3A${port}`;
 }
 
-function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, openBrowser = true) {
-	return new Promise(async (resolve, reject) => {
-		await fetch(getValidationEndpoint(), {
-			method: 'GET',
-			headers: {
-				'Authorization': `Bearer ${tokens.access_token}`
-			}
-		}).then(res => res.json()).then(async res => {
-			if (res.status) {
-				if (res.status == 401) {
-					console.log('Trying to refresh with the refresh token');
-					await fetch(getRefreshEndpoint(clientId, clientSecret, tokens.refresh_token), {
-						method: 'POST',
-						headers: {
-							'Client-ID': clientId,
-							'Authorization': `Bearer ${tokens.access_token}`
-						}
-					}).then(res => res.json()).then(res => {
-						if (res.status) {
-							console.log('Failed to refresh the token! Try to reauthenticate!');
-							console.log(`Status: ${res.status}; Error-Message: ${res.message}`);
-							console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes())}`);
-							if (openBrowser)
-								open(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
-						} else {
-							tokens = res;
-							fs.writeFileSync('.tokens.json', JSON.stringify(res));
-							console.log('Tokens saved!');
-							resolve('Tokens successfully refreshed!');
-						}
-					}).catch(err => {
+async function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, openBrowser = true) {
+	console.log(`Tokens: ${JSON.stringify(tokens)}`);
+	await fetch(getValidationEndpoint(), {
+		method: 'GET',
+		headers: {
+			'Authorization': `Bearer ${tokens.access_token}`
+		}
+	}).then(res => res.json()).then(async res => {
+		if (res.status) {
+			if (res.status == 401) {
+				console.log('Trying to refresh with the refresh token');
+				await fetch(getRefreshEndpoint(clientId, clientSecret, tokens.refresh_token), {
+					method: 'POST',
+					headers: {
+						'Client-ID': clientId,
+						'Authorization': `Bearer ${tokens.access_token}`
+					}
+				}).then(res => res.json()).then(async res => {
+					if (res.status) {
 						console.log('Failed to refresh the token! Try to reauthenticate!');
-						console.error(err);
+						console.log(`Status: ${res.status}; Error-Message: ${res.message}`);
 						console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes())}`);
 						if (openBrowser)
 							open(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
-					});
-				} else {
-					console.log(`Status: ${res.status}`);
-					console.log(`Error-Message: ${res.message}`);
-					reject("Tokens couldn't be refreshed!");
-				}
+					} else {
+						tokens = res;
+						fs.writeFileSync('.tokens.json', JSON.stringify(res));
+						console.log('Tokens saved!');
+						return 'Tokens successfully refreshed!';
+					}
+				}).catch(err => {
+					console.log('Failed to refresh the token! Try to reauthenticate!');
+					console.error(err);
+					console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes())}`);
+					if (openBrowser)
+						open(getAuthorizationEndpoint(clientId, clientSecret, redirectUri, port, getScopes()));
+				});
 			} else {
-				console.log('Validating...');
-				console.log(`Client-ID: ${res.client_id}; Login-Name: ${res.login}; Scopes: ${res.scopes.join(', ')}; User-ID: ${res.user_id}; Expires in: ${res.expires_in} seconds`);
-				resolve('Successfully validated!');
+				console.log(`Status: ${res.status}`);
+				console.log(`Error-Message: ${res.message}`);
+				throw "Tokens couldn't be refreshed!";
 			}
-		}).catch(err => {
-			reject('Validation failed!');
-		});
+		} else {
+			console.log('Validating...');
+			console.log(`Client-ID: ${res.client_id}; Login-Name: ${res.login}; Scopes: ${res.scopes.join(', ')}; User-ID: ${res.user_id}; Expires in: ${res.expires_in} seconds`);
+			return 'Successfully validated!';
+		}
 	});
 }
 
