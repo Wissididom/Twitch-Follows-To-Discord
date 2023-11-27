@@ -115,7 +115,6 @@ function getAccessTokenByAuthTokenEndpoint(clientId, clientSecret, code, redirec
 }
 
 async function validateTwitchToken(clientId, clientSecret, redirectUri, port, openBrowser = true) {
-	console.log(`Tokens: ${JSON.stringify(tokens)}`);
 	await fetch(getValidationEndpoint(), {
 		method: 'GET',
 		headers: {
