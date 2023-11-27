@@ -28,7 +28,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 			}
 			let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
 			let followersToSkip = [];
-			console.log(JSON.stringify(followers));
+			if (!Array.isArray(followers.followers))console.log(JSON.stringify(followers));
 			for (let follower of followers.followers) {
 				if (lastFollowerList.followers.find(item => {
 					return item.user_id == follower.user_id;
