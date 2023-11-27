@@ -158,7 +158,7 @@ async function validateTwitchToken(clientId, clientSecret, redirectUri, port, op
 			}
 		} else {
 			console.log('Validating...');
-			console.log(`Login-Name: ${res.login}; Scopes: ${res.scopes.join(', ')}; User-ID: ${res.user_id}; Expires in: ${res.expires_in} seconds`);
+			console.log(`Login-Name: ${res.login}; User-ID: ${res.user_id}; Expires in: ${res.expires_in} seconds; Scopes: ${res.scopes.join(', ')}`);
 			tokens.expires_in = res.expires_in;
 			return 'Successfully validated!';
 		}
