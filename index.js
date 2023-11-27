@@ -24,63 +24,57 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 (async () =>{
 	setInterval(async () => { // Run every second
 		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
-			await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, process.env.BROADCASTER_ID).then(async followers => {
-				if (!fs.existsSync('lastFollowerList.json')) {
-					fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
-					return; // Don't need to compare lists if the old list doesn't exist yet
-				} 
-				let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
-				let followersToSkip = [];
-				console.log(JSON.stringify(followers));
-				for (let follower of followers.followers) {
-					if (lastFollowerList.followers.find(item => {
-						return item.user_id == follower.user_id;
-					})) { // Follower in both lists
-						followersToSkip.push(follower.user_id);
-					} else {
-						// Follower only in new list, aka. channel.follow
-						if (!INCLUDE_FOLLOWS) continue;
-						await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`,{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json"
-							},
-							body: JSON.stringify({
-								content: `**User Followed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
-								allowed_mentions: [] // Do not allow any kind of pings
-							})
-						});
-					}
-				}
-				for (let follower of lastFollowerList.followers) {
-					if (followersToSkip.includes(follower.user_id)) continue; // Skip followers that are in both lists
-					if (followers.followers.find(item => {
-						return item.user_id == follower.user_id;
-					})) { // Follower in both lists (shouldn't happen because of followersToSkip handling)
-						followersToSkip.push(follower.user_id);
-					} else {
-						// Follower only in old list, aka. channel.unfollow
-						if (!INCLUDE_UNFOLLOWS) continue;
-						await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`,{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json"
-							},
-							body: JSON.stringify({
-								content: `**User Unfollowed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
-								allowed_mentions: [] // Do not allow any kind of pings
-							})
-						});
-					}
-				}
+			let followers = await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, process.env.BROADCASTER_ID);
+			if (!fs.existsSync('lastFollowerList.json')) {
 				fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
-			}).catch(async err => {
-				console.log(err);
-			});
+				return; // Don't need to compare lists if the old list doesn't exist yet
+			}
+			let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
+			let followersToSkip = [];
+			console.log(JSON.stringify(followers));
+			for (let follower of followers.followers) {
+				if (lastFollowerList.followers.find(item => {
+					return item.user_id == follower.user_id;
+				})) { // Follower in both lists
+					followersToSkip.push(follower.user_id);
+				} else {
+					// Follower only in new list, aka. channel.follow
+					if (!INCLUDE_FOLLOWS) continue;
+					await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+						method: 'POST',
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							content: `**User Followed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
+							allowed_mentions: [] // Do not allow any kind of pings
+						})
+					});
+				}
+			}
+			for (let follower of lastFollowerList.followers) {
+				if (followersToSkip.includes(follower.user_id)) continue; // Skip followers that are in both lists
+				if (followers.followers.find(item => {
+					return item.user_id == follower.user_id;
+				})) { // Follower in both lists (shouldn't happen because of followersToSkip handling)
+					followersToSkip.push(follower.user_id);
+				} else {
+					// Follower only in old list, aka. channel.unfollow
+					if (!INCLUDE_UNFOLLOWS) continue;
+					await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+						method: 'POST',
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							content: `**User Unfollowed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
+							allowed_mentions: [] // Do not allow any kind of pings
+						})
+					});
+				}
+			}
+			fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
 		}).catch(async (err) => {
-			await interaction.editReply({
-				content: `Token validation failed! (${err})`
-			});
 			console.trace(err);
 		});
 	}, 5000);
