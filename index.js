@@ -13,7 +13,7 @@ import {
 
 dotenv.config();
 
-let tokens = {
+var tokens = {
 	access_token: 'N/A',
 	refresh_token: 'N/A'
 };
