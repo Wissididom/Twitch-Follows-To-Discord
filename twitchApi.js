@@ -2,6 +2,19 @@ import * as fs from 'node:fs';
 
 import open, {openApp, apps} from 'open';
 
+var tokens = {
+	access_token: 'N/A',
+	refresh_token: 'N/A'
+};
+
+function getTokens() {
+	return tokens;
+}
+
+function setTokens(tokns) {
+	tokens = tokns;
+}
+
 function getStatusResponse(res, json) {
 	switch (res.status) {
 		case 400:
@@ -36,7 +49,7 @@ async function getUser(clientId, accessToken, login) {
 }
 
 // https://dev.twitch.tv/docs/api/reference/#get-channel-followers
-async function getChannelFollowers(clientId, accessToken, broadcasterId, paginationCursor = null) {
+async function getChannelFollowers(clientId, broadcasterId, paginationCursor = null) {
 	let apiUrl;
 	if (paginationCursor) {
 		apiUrl = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100&after=${paginationCursor}`;
@@ -47,7 +60,7 @@ async function getChannelFollowers(clientId, accessToken, broadcasterId, paginat
 		method: 'GET',
 		headers: {
 			'Client-ID': clientId,
-			'Authorization': `Bearer ${accessToken}`,
+			'Authorization': `Bearer ${tokens.access_token}`,
 			'Content-Type': 'application/json'
 		}
 	});
@@ -67,7 +80,7 @@ async function getChannelFollowers(clientId, accessToken, broadcasterId, paginat
 		}
 		let pagination = json.pagination;
 		if (pagination.cursor) {
-			let followers = await getChannelFollowers(clientId, accessToken, broadcasterId, pagination.cursor);
+			let followers = await getChannelFollowers(clientId, broadcasterId, pagination.cursor);
 			if (followers.followers) {
 				for (let follower of followers.followers) {
 					result.followers.push(follower);
@@ -101,7 +114,7 @@ function getAccessTokenByAuthTokenEndpoint(clientId, clientSecret, code, redirec
 	return `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&code=${code}&grant_type=authorization_code&redirect_uri=${encodeURIComponent(redirectUri)}%3A${port}`;
 }
 
-async function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, port, openBrowser = true) {
+async function validateTwitchToken(clientId, clientSecret, redirectUri, port, openBrowser = true) {
 	console.log(`Tokens: ${JSON.stringify(tokens)}`);
 	await fetch(getValidationEndpoint(), {
 		method: 'GET',
@@ -152,6 +165,8 @@ async function validateTwitchToken(clientId, clientSecret, tokens, redirectUri, 
 }
 
 export {
+	getTokens,
+	setTokens,
 	getUser,
 	getChannelFollowers,
 	getScopes,

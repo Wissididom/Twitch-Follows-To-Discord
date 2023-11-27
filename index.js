@@ -8,23 +8,20 @@ import {
 	getScopes,
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
-	validateTwitchToken
+	validateTwitchToken,
+	getTokens,
+	setTokens
 } from './twitchApi.js';
 
 dotenv.config();
-
-var tokens = {
-	access_token: 'N/A',
-	refresh_token: 'N/A'
-};
 
 const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == 'true';
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 
 (async () =>{
 	setInterval(async () => { // Run every second
-		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
-			let followers = await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, process.env.BROADCASTER_ID);
+		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
+			let followers = await getChannelFollowers(process.env.TWITCH_CLIENT_ID, process.env.BROADCASTER_ID);
 			if (!fs.existsSync('lastFollowerList.json')) {
 				fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
 				return; // Don't need to compare lists if the old list doesn't exist yet
@@ -86,7 +83,7 @@ server.all('/', async (req, res) => {
 		method: 'POST'
 	}).then(res => res.json()).catch(err => console.error);
 	if (authObj.access_token) {
-		tokens = authObj;
+		setTokens(authObj);
 		fs.writeFileSync('.tokens.json', `${JSON.stringify(authObj)}\n`);
 		res.send('<html>Tokens saved!</html>');
 		console.log('Tokens saved!');
@@ -106,6 +103,6 @@ if (!(await fetch(process.env.DISCORD_WEBHOOK_URL)).ok) {
 	process.kill(process.pid, 'SIGTERM');  // Kill Bot
 } else {
 	if (fs.existsSync('.tokens.json')) {
-		tokens = JSON.parse(fs.readFileSync('.tokens.json', {encoding: 'utf8', flag: 'r'}));
+		setTokens(JSON.parse(fs.readFileSync('.tokens.json', {encoding: 'utf8', flag: 'r'})));
 	}
 }
