@@ -131,7 +131,7 @@ async function validateTwitchToken(clientId, clientSecret, redirectUri, port, op
 						'Client-ID': clientId,
 						'Authorization': `Bearer ${tokens.access_token}`
 					}
-				}).then(res => res.json()).then(async res => {
+				}).then(res => res.json()).then(res => {
 					if (res.status) {
 						console.log('Failed to refresh the token! Try to reauthenticate!');
 						console.log(`Status: ${res.status}; Error-Message: ${res.message}`);
