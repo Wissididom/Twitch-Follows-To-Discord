@@ -29,6 +29,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 			let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
 			let followersToSkip = [];
 			if (!Array.isArray(followers.followers))console.log(JSON.stringify(followers));
+			let changedFollowers = false;
 			for (let follower of followers.followers) {
 				if (lastFollowerList.followers.find(item => {
 					return item.user_id == follower.user_id;
@@ -36,6 +37,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 					followersToSkip.push(follower.user_id);
 				} else {
 					// Follower only in new list, aka. channel.follow
+					changedFollowers = true;
 					if (!INCLUDE_FOLLOWS) continue;
 					await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
 						method: 'POST',
@@ -57,6 +59,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 					followersToSkip.push(follower.user_id);
 				} else {
 					// Follower only in old list, aka. channel.unfollow
+					changedFollowers = true;
 					if (!INCLUDE_UNFOLLOWS) continue;
 					await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
 						method: 'POST',
@@ -70,7 +73,8 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 					});
 				}
 			}
-			fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
+			if (changedFollowers)
+				fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
 		}).catch(async (err) => {
 			console.trace(err);
 		});
