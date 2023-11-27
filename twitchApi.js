@@ -43,46 +43,39 @@ async function getChannelFollowers(clientId, accessToken, broadcasterId, paginat
 	} else {
 		apiUrl = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100`;
 	}
-	return new Promise(async (resolve, reject) => {
-		try {
-			const res = await fetch(apiUrl, {
-				method: 'GET',
-				headers: {
-					'Client-ID': clientId,
-					'Authorization': `Bearer ${accessToken}`,
-					'Content-Type': 'application/json'
-				}
-			});
-			const json = await res.json();
-			if (!res.ok) {
-				resolve(getStatusResponse(res, json));
-				return;
-			}
-			if (json.error) {
-				resolve(`Error: ${json.error}\nError-Message: ${json.message}`);
-			} else {
-				let result = {
-					total: json.total,
-					followers: []
-				};
-				if (json.data) {
-					result.followers = json.data;
-				}
-				let pagination = json.pagination;
-				if (pagination.cursor) {
-					let followers = await getChannelFollowers(clientId, accessToken, broadcasterId, pagination.cursor);
-					if (followers.followers) {
-						for (let follower of followers.followers) {
-							result.followers.push(follower);
-						}
-					}
-				}
-				resolve(result);
-			}
-		} catch (e) {
-			reject(e);
+	const res = await fetch(apiUrl, {
+		method: 'GET',
+		headers: {
+			'Client-ID': clientId,
+			'Authorization': `Bearer ${accessToken}`,
+			'Content-Type': 'application/json'
 		}
 	});
+	const json = await res.json();
+	if (!res.ok) {
+		return getStatusResponse(res, json);
+	}
+	if (json.error) {
+		return `Error: ${json.error}\nError-Message: ${json.message}`;
+	} else {
+		let result = {
+			total: json.total,
+			followers: []
+		};
+		if (json.data) {
+			result.followers = json.data;
+		}
+		let pagination = json.pagination;
+		if (pagination.cursor) {
+			let followers = await getChannelFollowers(clientId, accessToken, broadcasterId, pagination.cursor);
+			if (followers.followers) {
+				for (let follower of followers.followers) {
+					result.followers.push(follower);
+				}
+			}
+		}
+		return result;
+	}
 }
 
 function getScopes() {
