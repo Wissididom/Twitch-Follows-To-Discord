@@ -5,14 +5,6 @@ var tokens = {
 	refresh_token: 'N/A'
 };
 
-function getTokens() {
-	return tokens;
-}
-
-function setTokens(tokns) {
-	tokens = tokns;
-}
-
 function getStatusResponse(res, json) {
 	switch (res.status) {
 		case 400:
@@ -66,8 +58,7 @@ async function getChannelFollowers(broadcasterId, paginationCursor = null) {
 	});
 	const json = await res.json();
 	if (res.status == 401) {
-		console.log(getStatusResponse(res, json));
-		await fetch(getRefreshEndpoint(clientId, clientSecret, tokens.refresh_token), {
+		await fetch(getRefreshEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens.refresh_token), {
 			method: 'POST',
 			headers: {
 				'Client-ID': clientId,
@@ -136,13 +127,34 @@ function getAccessTokenByAuthTokenEndpoint(clientId, clientSecret, code, redirec
 	return `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&code=${code}&grant_type=authorization_code&redirect_uri=${encodeURIComponent(redirectUri)}%3A${port}`;
 }
 
+async function validateTokens() {
+	tokens = JSON.parse(fs.readFileSync('.tokens.json', {encoding: 'utf8', flag: 'r'}));
+	return await fetch('https://id.twitch.tv/oauth2/validate', {
+		method: 'GET',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`
+		}
+	}).then(async res => {
+		let json = await res.json();
+		if (res.ok) {
+			tokens.expires_in = json.expires_in;
+			setInterval(() => {
+				console.log(tokens.expires_in + ' seconds');
+				tokens.expires_in -= 5;
+			}, 5000);
+		} else {
+			throw new Error(getStatusResponse(res, json));
+		}
+	});
+}
+
 export {
-	getTokens,
-	setTokens,
 	getUser,
 	getChannelFollowers,
 	getScopes,
 	getRefreshEndpoint,
 	getAuthorizationEndpoint,
-	getAccessTokenByAuthTokenEndpoint
+	getAccessTokenByAuthTokenEndpoint,
+	validateTokens
 };

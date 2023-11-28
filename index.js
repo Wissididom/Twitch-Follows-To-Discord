@@ -8,8 +8,7 @@ import {
 	getScopes,
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
-	getTokens,
-	setTokens
+	validateTokens
 } from './twitchApi.js';
 
 dotenv.config();
@@ -17,7 +16,7 @@ dotenv.config();
 const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == 'true';
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 
-(async () =>{
+var loop = async () =>{
 	setInterval(async () => { // Run every 5 seconds
 		let followers = await getChannelFollowers(process.env.TWITCH_CLIENT_ID, process.env.BROADCASTER_ID);
 		if (!fs.existsSync('lastFollowerList.json')) {
@@ -74,7 +73,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 		if (changedFollowers)
 			fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
 	}, 5000);
-})();
+};
 
 const server = express();
 server.all('/', async (req, res) => {
@@ -91,17 +90,16 @@ server.all('/', async (req, res) => {
 		console.log("Couldn't get the access token!");
 	}	
 });
-server.listen(parseInt(process.env.LOCAL_SERVER_PORT), () => {
+server.listen(parseInt(process.env.LOCAL_SERVER_PORT), async () => {
 	console.log('Express Server ready!');
-	if (!fs.existsSync('.tokens.json')) {
+	if (fs.existsSync('.tokens.json')) {
+		await validateTokens();
+		await loop();
+	} else {
 		console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
 	}
 });
 if (!(await fetch(process.env.DISCORD_WEBHOOK_URL)).ok) {
 	console.log("Webhook response wasn't between 200 and 299 inclusive!");
 	process.kill(process.pid, 'SIGTERM');  // Kill Bot
-} else {
-	if (fs.existsSync('.tokens.json')) {
-		setTokens(JSON.parse(fs.readFileSync('.tokens.json', {encoding: 'utf8', flag: 'r'})));
-	}
 }
