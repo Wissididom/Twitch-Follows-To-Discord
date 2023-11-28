@@ -25,6 +25,8 @@ function getStatusResponse(res, json) {
 			return `Not Found: ${json.message}`;
 		case 429:
 			return `Too Many Requests: ${json.message}`;
+		case 500:
+			return `Internal Server Error: ${json.message}`;
 		default:
 			return `${json.error} (${res.status}): ${json.message}`;
 	}
