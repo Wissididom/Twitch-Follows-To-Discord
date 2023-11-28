@@ -155,7 +155,7 @@ async function validateTwitchToken(clientId, clientSecret, redirectUri, port, op
 			} else {
 				console.log(`Status: ${res.status}`);
 				console.log(`Error-Message: ${res.message}`);
-				throw "Tokens couldn't be refreshed!";
+				throw new Error("Tokens couldn't be refreshed!");
 			}
 		} else {
 			console.log('Validating...');
