@@ -19,7 +19,7 @@ const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == 'true';
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 
 (async () =>{
-	setInterval(async () => { // Run every second
+	setInterval(async () => { // Run every 5 seconds
 		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
 			let followers = await getChannelFollowers(process.env.TWITCH_CLIENT_ID, process.env.BROADCASTER_ID);
 			if (!fs.existsSync('lastFollowerList.json')) {
