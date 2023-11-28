@@ -68,10 +68,10 @@ async function getChannelFollowers(clientId, broadcasterId, paginationCursor = n
 	});
 	const json = await res.json();
 	if (!res.ok) {
-		return getStatusResponse(res, json);
+		throw new Error(getStatusResponse(res, json));
 	}
 	if (json.error) {
-		return `Error: ${json.error}\nError-Message: ${json.message}`;
+		throw new Error(`Error: ${json.error}\nError-Message: ${json.message}`);
 	} else {
 		let result = {
 			total: json.total,
