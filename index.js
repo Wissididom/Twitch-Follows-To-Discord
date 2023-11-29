@@ -18,7 +18,7 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 
 var loop = async () =>{
 	setInterval(async () => { // Run every 5 seconds
-		let followers = await getChannelFollowers(process.env.TWITCH_CLIENT_ID, process.env.BROADCASTER_ID);
+		let followers = await getChannelFollowers(process.env.BROADCASTER_ID);
 		if (!fs.existsSync('lastFollowerList.json')) {
 			fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
 			return; // Don't need to compare lists if the old list doesn't exist yet
