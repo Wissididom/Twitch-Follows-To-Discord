@@ -61,7 +61,7 @@ async function getChannelFollowers(broadcasterId, paginationCursor = null) {
 		await fetch(getRefreshEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens.refresh_token), {
 			method: 'POST',
 			headers: {
-				'Client-ID': clientId,
+				'Client-ID': process.env.TWITCH_CLIENT_ID,
 				'Authorization': `Bearer ${tokens.access_token}`
 			}
 		}).then(res => res.json()).then(res => {
