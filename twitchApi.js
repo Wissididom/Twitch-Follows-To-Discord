@@ -7,6 +7,10 @@ var tokens = {
 	refresh_token: 'N/A'
 };
 
+function setTokens(token) {
+	tokens = token;
+}
+
 function getStatusResponse(res, json) {
 	switch (res.status) {
 		case 400:
@@ -134,7 +138,7 @@ function getAccessTokenByAuthTokenEndpoint(clientId, clientSecret, code, redirec
 	return `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&code=${code}&grant_type=authorization_code&redirect_uri=${encodeURIComponent(redirectUri)}%3A${port}`;
 }
 
-async function validateTokens() {
+async function validateTwitchToken() {
 	tokens = JSON.parse(fs.readFileSync('.tokens.json', {encoding: 'utf8', flag: 'r'}));
 	return await fetch(VALIDATE_ENDPOINT, {
 		method: 'GET',
@@ -167,5 +171,6 @@ export {
 	getRefreshEndpoint,
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
-	validateTokens
+	validateTwitchToken,
+	setTokens
 };
