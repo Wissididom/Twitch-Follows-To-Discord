@@ -8,7 +8,7 @@ import {
 	getScopes,
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
-	validateTokens
+	validateTwitchToken
 } from './twitchApi.js';
 
 dotenv.config();
@@ -93,7 +93,7 @@ server.all('/', async (req, res) => {
 server.listen(parseInt(process.env.LOCAL_SERVER_PORT), async () => {
 	console.log('Express Server ready!');
 	if (fs.existsSync('.tokens.json')) {
-		await validateTokens();
+		await validateTwitchToken();
 		await loop();
 	} else {
 		console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
