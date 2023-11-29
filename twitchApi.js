@@ -7,6 +7,10 @@ var tokens = {
 	refresh_token: 'N/A'
 };
 
+function setToken(token) {
+	tokens = token;
+}
+
 function getStatusResponse(res, json) {
 	switch (res.status) {
 		case 400:
@@ -167,5 +171,6 @@ export {
 	getRefreshEndpoint,
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
-	validateTwitchToken
+	validateTwitchToken,
+	setToken
 };
