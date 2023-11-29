@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 
+const VALIDATE_ENDPOINT = 'https://id.twitch.tv/oauth2/validate';
+
 var tokens = {
 	access_token: 'N/A',
 	refresh_token: 'N/A'
@@ -20,6 +22,33 @@ function getStatusResponse(res, json) {
 		default:
 			return `${json.error} (${res.status}): ${json.message}`;
 	}
+}
+
+async function refreshToken() {
+	return await fetch(getRefreshEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens.refresh_token), {
+		method: 'POST',
+		headers: {
+			'Client-ID': process.env.TWITCH_CLIENT_ID,
+			'Authorization': `Bearer ${tokens.access_token}`
+		}
+	}).then(async res => {
+		let json = await res.json();
+		if (!res.ok) {
+			console.log('Failed to refresh the token! Try to reauthenticate!');
+			console.log(`Status: ${res.status}; Error-Message: ${json.message}`);
+			console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
+		} else {
+			tokens = json;
+			fs.writeFileSync('.tokens.json', JSON.stringify(json));
+			console.log('Tokens saved!');
+			return 'Tokens successfully refreshed!';
+		}
+	}).catch(err => {
+		console.log('Failed to refresh the token! Try to reauthenticate!');
+		console.error(err);
+		console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
+		throw new Error('Failed to refresh token!');
+	});
 }
 
 async function getUser(clientId, accessToken, login) {
@@ -58,29 +87,7 @@ async function getChannelFollowers(broadcasterId, paginationCursor = null) {
 	});
 	const json = await res.json();
 	if (res.status == 401) {
-		await fetch(getRefreshEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens.refresh_token), {
-			method: 'POST',
-			headers: {
-				'Client-ID': process.env.TWITCH_CLIENT_ID,
-				'Authorization': `Bearer ${tokens.access_token}`
-			}
-		}).then(res => res.json()).then(res => {
-			if (!res.ok) {
-				console.log('Failed to refresh the token! Try to reauthenticate!');
-				console.log(`Status: ${res.status}; Error-Message: ${res.message}`);
-				console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
-			} else {
-				tokens = res;
-				fs.writeFileSync('.tokens.json', JSON.stringify(res));
-				console.log('Tokens saved!');
-				return 'Tokens successfully refreshed!';
-			}
-		}).catch(err => {
-			console.log('Failed to refresh the token! Try to reauthenticate!');
-			console.error(err);
-			console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
-			throw new Error('Failed to refresh token!');
-		});
+		await refreshToken();
 	}
 	if (!res.ok) {
 		throw new Error(getStatusResponse(res, json));
@@ -129,7 +136,7 @@ function getAccessTokenByAuthTokenEndpoint(clientId, clientSecret, code, redirec
 
 async function validateTokens() {
 	tokens = JSON.parse(fs.readFileSync('.tokens.json', {encoding: 'utf8', flag: 'r'}));
-	return await fetch('https://id.twitch.tv/oauth2/validate', {
+	return await fetch(VALIDATE_ENDPOINT, {
 		method: 'GET',
 		headers: {
 			'Client-ID': process.env.TWITCH_CLIENT_ID,
@@ -139,13 +146,17 @@ async function validateTokens() {
 		let json = await res.json();
 		if (res.ok) {
 			tokens.expires_in = json.expires_in;
-			setInterval(() => {
-				console.log(tokens.expires_in + ' seconds');
-				tokens.expires_in -= 5;
-			}, 5000);
 		} else {
-			throw new Error(getStatusResponse(res, json));
+			if (res.status == 401) {
+				await refreshToken();
+			} else {
+				throw new Error(getStatusResponse(res, json));
+			}
 		}
+		setInterval(() => {
+			console.log(tokens.expires_in + ' seconds');
+			tokens.expires_in -= 5;
+		}, 5000);
 	});
 }
 
