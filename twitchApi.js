@@ -7,7 +7,7 @@ var tokens = {
 	refresh_token: 'N/A'
 };
 
-function setToken(token) {
+function setTokens(token) {
 	tokens = token;
 }
 
@@ -172,5 +172,5 @@ export {
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
 	validateTwitchToken,
-	setToken
+	setTokens
 };

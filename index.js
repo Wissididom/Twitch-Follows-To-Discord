@@ -9,7 +9,7 @@ import {
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
 	validateTwitchToken,
-	setToken
+	setTokens
 } from './twitchApi.js';
 
 dotenv.config();
