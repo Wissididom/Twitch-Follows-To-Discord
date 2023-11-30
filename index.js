@@ -8,82 +8,73 @@ import {
 	getScopes,
 	getAuthorizationEndpoint,
 	getAccessTokenByAuthTokenEndpoint,
-	validateTwitchToken
+	validateTwitchToken,
+	setTokens
 } from './twitchApi.js';
 
 dotenv.config();
 
-let tokens = {
-	access_token: 'N/A',
-	refresh_token: 'N/A'
-};
-
 const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == 'true';
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == 'true';
 
-(async () =>{
-	setInterval(async () => { // Run every second
-		await validateTwitchToken(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, tokens, 'http://localhost', process.env.LOCAL_SERVER_PORT, false).then(async (/*value*/) => {
-			await getChannelFollowers(process.env.TWITCH_CLIENT_ID, tokens.access_token, process.env.BROADCASTER_ID).then(async followers => {
-				if (!fs.existsSync('lastFollowerList.json')) {
-					fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
-					return; // Don't need to compare lists if the old list doesn't exist yet
-				} 
-				let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
-				let followersToSkip = [];
-				for (let follower of followers.followers) {
-					if (lastFollowerList.followers.find(item => {
-						return item.user_id == follower.user_id;
-					})) { // Follower in both lists
-						followersToSkip.push(follower.user_id);
-					} else {
-						// Follower only in new list, aka. channel.follow
-						if (!INCLUDE_FOLLOWS) continue;
-						await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`,{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json"
-							},
-							body: JSON.stringify({
-								content: `**User Followed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
-								allowed_mentions: [] // Do not allow any kind of pings
-							})
-						});
-					}
-				}
-				for (let follower of lastFollowerList.followers) {
-					if (followersToSkip.includes(follower.user_id)) continue; // Skip followers that are in both lists
-					if (followers.followers.find(item => {
-						return item.user_id == follower.user_id;
-					})) { // Follower in both lists (shouldn't happen because of followersToSkip handling)
-						followersToSkip.push(follower.user_id);
-					} else {
-						// Follower only in old list, aka. channel.unfollow
-						if (!INCLUDE_UNFOLLOWS) continue;
-						await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`,{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json"
-							},
-							body: JSON.stringify({
-								content: `**User Unfollowed!**\n**Display-Name**: ${follower.user_name}\n**User-Name**: ${follower.user_login}\n**User-ID**: ${follower.user_id}`,
-								allowed_mentions: [] // Do not allow any kind of pings
-							})
-						});
-					}
-				}
-				fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
-			}).catch(async err => {
-				console.log(err);
-			});
-		}).catch(async (err) => {
-			await interaction.editReply({
-				content: `Token validation failed! (${err})`
-			});
-			console.trace(err);
-		});
+var loop = async () =>{
+	setInterval(async () => { // Run every 5 seconds
+		let followers = await getChannelFollowers(process.env.BROADCASTER_ID);
+		if (!fs.existsSync('lastFollowerList.json')) {
+			fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
+			return; // Don't need to compare lists if the old list doesn't exist yet
+		}
+		let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
+		let followersToSkip = [];
+		if (!Array.isArray(followers.followers)) console.log(JSON.stringify(followers));
+		let changedFollowers = false;
+		for (let follower of followers.followers) {
+			if (lastFollowerList.followers.find(item => {
+				return item.user_id == follower.user_id;
+			})) { // Follower in both lists
+				followersToSkip.push(follower.user_id);
+			} else {
+				// Follower only in new list, aka. channel.follow
+				changedFollowers = true;
+				if (!INCLUDE_FOLLOWS) continue;
+				await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						content: `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\``,
+						allowed_mentions: [] // Do not allow any kind of pings
+					})
+				});
+			}
+		}
+		for (let follower of lastFollowerList.followers) {
+			if (followersToSkip.includes(follower.user_id)) continue; // Skip followers that are in both lists
+			if (followers.followers.find(item => {
+				return item.user_id == follower.user_id;
+			})) { // Follower in both lists (shouldn't happen because of followersToSkip handling)
+				followersToSkip.push(follower.user_id);
+			} else {
+				// Follower only in old list, aka. channel.unfollow
+				changedFollowers = true;
+				if (!INCLUDE_UNFOLLOWS) continue;
+				await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+					method: 'POST',
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						content: `**User Unfollowed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\``,
+						allowed_mentions: [] // Do not allow any kind of pings
+					})
+				});
+			}
+		}
+		if (changedFollowers)
+			fs.writeFileSync('lastFollowerList.json', `${JSON.stringify(followers, null, 4)}\n`);
 	}, 5000);
-})();
+};
 
 const server = express();
 server.all('/', async (req, res) => {
@@ -91,7 +82,7 @@ server.all('/', async (req, res) => {
 		method: 'POST'
 	}).then(res => res.json()).catch(err => console.error);
 	if (authObj.access_token) {
-		tokens = authObj;
+		setTokens(authObj);
 		fs.writeFileSync('.tokens.json', `${JSON.stringify(authObj)}\n`);
 		res.send('<html>Tokens saved!</html>');
 		console.log('Tokens saved!');
@@ -100,17 +91,16 @@ server.all('/', async (req, res) => {
 		console.log("Couldn't get the access token!");
 	}	
 });
-server.listen(parseInt(process.env.LOCAL_SERVER_PORT), () => {
+server.listen(parseInt(process.env.LOCAL_SERVER_PORT), async () => {
 	console.log('Express Server ready!');
-	if (!fs.existsSync('.tokens.json')) {
+	if (fs.existsSync('.tokens.json')) {
+		await validateTwitchToken();
+		await loop();
+	} else {
 		console.log(`Open the following Website to authenticate: ${getAuthorizationEndpoint(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET, 'http://localhost', process.env.LOCAL_SERVER_PORT, getScopes())}`);
 	}
 });
 if (!(await fetch(process.env.DISCORD_WEBHOOK_URL)).ok) {
 	console.log("Webhook response wasn't between 200 and 299 inclusive!");
 	process.kill(process.pid, 'SIGTERM');  // Kill Bot
-} else {
-	if (fs.existsSync('.tokens.json')) {
-		tokens = JSON.parse(fs.readFileSync('.tokens.json', {encoding: 'utf8', flag: 'r'}));
-	}
 }
