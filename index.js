@@ -26,7 +26,7 @@ var loop = async () =>{
 		}
 		let lastFollowerList = JSON.parse(fs.readFileSync('lastFollowerList.json', {encoding: 'utf8', flag: 'r'}));
 		let followersToSkip = [];
-		if (!Array.isArray(followers.followers))console.log(JSON.stringify(followers));
+		if (!Array.isArray(followers.followers)) console.log(JSON.stringify(followers));
 		let changedFollowers = false;
 		for (let follower of followers.followers) {
 			if (lastFollowerList.followers.find(item => {
