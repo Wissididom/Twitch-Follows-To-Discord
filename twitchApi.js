@@ -92,6 +92,7 @@ async function getChannelFollowers(broadcasterId, paginationCursor = null) {
 	const json = await res.json();
 	if (res.status == 401) {
 		await refreshToken();
+		return await getChannelFollowers(broadcasterId, paginationCursor);
 	}
 	if (!res.ok) {
 		throw new Error(getStatusResponse(res, json));
