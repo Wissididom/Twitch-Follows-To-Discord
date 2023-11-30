@@ -158,7 +158,6 @@ async function validateTwitchToken() {
 			}
 		}
 		setInterval(() => {
-			console.log(tokens.expires_in + ' seconds');
 			tokens.expires_in -= 5;
 		}, 5000);
 	});
