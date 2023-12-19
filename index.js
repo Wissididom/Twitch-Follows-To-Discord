@@ -76,11 +76,12 @@ var loop = async () => {
         });
       }
     }
-    if (changedFollowers)
+    if (changedFollowers) {
       fs.writeFileSync(
         "lastFollowerList.json",
         `${JSON.stringify(followers, null, 4)}\n`,
       );
+    }
   }, 5000);
 };
 
