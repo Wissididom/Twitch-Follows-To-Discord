@@ -36,7 +36,7 @@ async function handleDcfLogin(loopCallback) {
     tokens.user_code = dcfJson.user_code;
     tokens.verification_uri = dcfJson.verification_uri;
     console.log(
-      `Open ${tokens.verification_uri} in an browser and enter ${tokens.user_code} there!`,
+      `Open ${tokens.verification_uri} in a browser and enter ${tokens.user_code} there!`,
     );
   }
   let dcf_interval = setInterval(async () => {
