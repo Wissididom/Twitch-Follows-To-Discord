@@ -18,6 +18,7 @@ async function handleDcfLogin(loopCallback) {
     );
     let validated = await validate();
     if (validated) {
+      console.log("Validated Tokens and started polling loop");
       await loopCallback();
       return;
     }
@@ -53,6 +54,7 @@ async function handleDcfLogin(loopCallback) {
       tokens.refresh_token = tokenJson.refresh_token;
       fs.writeFileSync("./.tokens.json", JSON.stringify(tokens));
       clearInterval(dcf_interval);
+      console.log("Got Device Code Flow Tokens and started polling loop");
       await loopCallback();
     }
   }, 1000);
