@@ -2,7 +2,11 @@ import * as dotenv from "dotenv";
 
 import * as fs from "fs";
 
-import { handleDcfLogin, getChannelFollowers } from "./twitchApi.js";
+import {
+  handleDcfLogin,
+  getChannelFollowers,
+  getUserById,
+} from "./twitchApi.js";
 
 dotenv.config();
 
@@ -39,16 +43,23 @@ var loop = async () => {
         // Follower only in new list, aka. channel.follow
         changedFollowers = true;
         if (!INCLUDE_FOLLOWS) continue;
-        await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        let followedAt = new Date(follower.followed_at).getTime() / 1000;
+        let user = await getUserById(follower.user_id);
+        let createdAt = new Date(user.created_at).getTime() / 1000;
+        let response = await fetch(
+          `${process.env.DISCORD_WEBHOOK_URL}?wait=true`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              content: `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
+              allowed_mentions: { parse: [] }, // Do not allow any kind of pings
+            }),
           },
-          body: JSON.stringify({
-            content: `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\``,
-            allowed_mentions: [], // Do not allow any kind of pings
-          }),
-        });
+        );
+        console.log(response);
       }
     }
     for (let follower of lastFollowerList.followers) {
@@ -64,16 +75,23 @@ var loop = async () => {
         // Follower only in old list, aka. channel.unfollow
         changedFollowers = true;
         if (!INCLUDE_UNFOLLOWS) continue;
-        await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        let followedAt = new Date(follower.followed_at).getTime() / 1000;
+        let user = await getUserById(follower.user_id);
+        let createdAt = new Date(user.created_at).getTime() / 1000;
+        let response = await fetch(
+          `${process.env.DISCORD_WEBHOOK_URL}?wait=true`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              content: `**User Unfollowed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
+              allowed_mentions: { parse: [] }, // Do not allow any kind of pings
+            }),
           },
-          body: JSON.stringify({
-            content: `**User Unfollowed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\``,
-            allowed_mentions: [], // Do not allow any kind of pings
-          }),
-        });
+        );
+        console.log(response);
       }
     }
     if (changedFollowers) {
@@ -81,6 +99,7 @@ var loop = async () => {
         "lastFollowerList.json",
         `${JSON.stringify(followers, null, 4)}\n`,
       );
+      console.log(`Followers changed`);
     }
   }, 5000);
 };

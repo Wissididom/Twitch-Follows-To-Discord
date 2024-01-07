@@ -77,13 +77,13 @@ function getStatusResponse(res, json) {
   }
 }
 
-async function getUser(clientId, accessToken, login) {
+async function getUserByLogin(login) {
   if (login) {
     return (
       await fetch(`https://api.twitch.tv/helix/users?login=${login}`, {
         headers: {
-          "Client-ID": clientId,
-          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": process.env.TWITCH_CLIENT_ID,
+          Authorization: `Bearer ${tokens.access_token}`,
         },
       })
         .then((res) => res.json())
@@ -93,8 +93,34 @@ async function getUser(clientId, accessToken, login) {
     return (
       await fetch(`https://api.twitch.tv/helix/users`, {
         headers: {
-          "Client-ID": clientId,
-          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": process.env.TWITCH_CLIENT_ID,
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+      })
+        .then((res) => res.json())
+        .catch((err) => console.error)
+    ).data[0];
+  }
+}
+
+async function getUserById(id) {
+  if (id) {
+    return (
+      await fetch(`https://api.twitch.tv/helix/users?id=${id}`, {
+        headers: {
+          "Client-ID": process.env.TWITCH_CLIENT_ID,
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+      })
+        .then((res) => res.json())
+        .catch((err) => console.error)
+    ).data[0];
+  } else {
+    return (
+      await fetch(`https://api.twitch.tv/helix/users`, {
+        headers: {
+          "Client-ID": process.env.TWITCH_CLIENT_ID,
+          Authorization: `Bearer ${tokens.access_token}`,
         },
       })
         .then((res) => res.json())
@@ -121,11 +147,13 @@ async function getChannelFollowers(broadcasterId, paginationCursor = null) {
   });
   const json = await res.json();
   if (res.status == 401) {
+    console.log("Status 401");
     let refreshed = await refresh();
     if (!refreshed) throw new Error("Token refresh failed");
     return await getChannelFollowers(broadcasterId, paginationCursor);
   }
   if (!res.ok) {
+    console.log("!res.ok: " + res.status);
     throw new Error(getStatusResponse(res, json));
   }
   if (json.error) {
@@ -217,4 +245,4 @@ async function validate() {
   });
 }
 
-export { handleDcfLogin, getUser, getChannelFollowers };
+export { handleDcfLogin, getUserByLogin, getUserById, getChannelFollowers };
