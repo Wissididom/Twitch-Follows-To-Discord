@@ -13,8 +13,8 @@ dotenv.config();
 const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == "true";
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == "true";
 
-async function buildContent(follower, followed) {
-  let content = followed ? "**User Followed!**" : "**User Unfollowed!**";
+async function buildContent(follower, follow) {
+  let content = follow ? "**User Followed!**" : "**User Unfollowed!**";
   if (follower.user_name) {
     content += `\n**Display-Name**: \`\`${follower.user_name}\`\``;
   } else {
@@ -96,7 +96,7 @@ var loop = async () => {
         // Follower only in new list, aka. channel.follow
         changedFollowers = true;
         if (!INCLUDE_FOLLOWS) continue;
-        let content = buildContent(follower);
+        let content = buildContent(follower, true);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
@@ -114,7 +114,7 @@ var loop = async () => {
         // Follower only in old list, aka. channel.unfollow
         changedFollowers = true;
         if (!INCLUDE_UNFOLLOWS) continue;
-        let content = buildContent(follower);
+        let content = buildContent(follower, false);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
