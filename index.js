@@ -47,7 +47,7 @@ async function buildContent(follower, follow) {
 }
 
 async function postToDiscord(content) {
-  await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+  return await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
