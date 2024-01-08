@@ -47,19 +47,16 @@ async function buildContent(follower) {
 }
 
 async function postToDiscord(content) {
-  await fetch(
-    `${process.env.DISCORD_WEBHOOK_URL}?wait=true`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        content,
-        allowed_mentions: { parse: [] }, // Do not allow any kind of pings
-      }),
+  await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  )
+    body: JSON.stringify({
+      content,
+      allowed_mentions: { parse: [] }, // Do not allow any kind of pings
+    }),
+  });
 }
 
 async function outputIfNotOk(response) {
