@@ -96,7 +96,7 @@ var loop = async () => {
         // Follower only in new list, aka. channel.follow
         changedFollowers = true;
         if (!INCLUDE_FOLLOWS) continue;
-        let content = buildContent(follower, true);
+        let content = await buildContent(follower, true);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
@@ -114,7 +114,7 @@ var loop = async () => {
         // Follower only in old list, aka. channel.unfollow
         changedFollowers = true;
         if (!INCLUDE_UNFOLLOWS) continue;
-        let content = buildContent(follower, false);
+        let content = await buildContent(follower, false);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
