@@ -13,6 +13,59 @@ dotenv.config();
 const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == "true";
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == "true";
 
+async function buildContent(follower, follow) {
+  let content = follow ? "**User Followed!**" : "**User Unfollowed!**";
+  if (follower.user_name) {
+    content += `\n**Display-Name**: \`\`${follower.user_name}\`\``;
+  } else {
+    content += "\n**Display-Name**: ``(not available)``";
+  }
+  if (follower.user_login) {
+    content += `\n**User-Name**: \`\`${follower.user_login}\`\``;
+  } else {
+    content += "\n**User-Name**: ``(not available)``";
+  }
+  if (follower.user_id) {
+    content += `\n**User-ID**: \`\`${follower.user_id}\`\``;
+  } else {
+    content += "\n**User-ID**: ``(not available)``";
+  }
+  if (follower.followed_at) {
+    let followedAt = new Date(follower.followed_at).getTime() / 1000;
+    content += `\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)`;
+  } else {
+    content += "\n**Followed At**: ``(not available)``";
+  }
+  let user = follower.user_id ? await getUserById(follower.user_id) : null;
+  if (user && user.created_at) {
+    let createdAt = new Date(user.created_at).getTime() / 1000;
+    content += `\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`;
+  } else {
+    content += "\n**Created At**: ``(not available)``";
+  }
+  return content;
+}
+
+async function postToDiscord(content) {
+  return await fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      content,
+      allowed_mentions: { parse: [] }, // Do not allow any kind of pings
+    }),
+  });
+}
+
+async function outputIfNotOk(response) {
+  if (!response.ok) {
+    console.log(`${response.status} ${response.statusText}`);
+    console.log(await response.text());
+  }
+}
+
 var loop = async () => {
   setInterval(async () => {
     // Run every 5 seconds
@@ -43,23 +96,9 @@ var loop = async () => {
         // Follower only in new list, aka. channel.follow
         changedFollowers = true;
         if (!INCLUDE_FOLLOWS) continue;
-        let followedAt = new Date(follower.followed_at).getTime() / 1000;
-        let user = await getUserById(follower.user_id);
-        let createdAt = new Date(user.created_at).getTime() / 1000;
-        let response = await fetch(
-          `${process.env.DISCORD_WEBHOOK_URL}?wait=true`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              content: `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
-              allowed_mentions: { parse: [] }, // Do not allow any kind of pings
-            }),
-          },
-        );
-        console.log(response);
+        let content = await buildContent(follower, true);
+        let response = await postToDiscord(content);
+        await outputIfNotOk(response);
       }
     }
     for (let follower of lastFollowerList.followers) {
@@ -75,23 +114,9 @@ var loop = async () => {
         // Follower only in old list, aka. channel.unfollow
         changedFollowers = true;
         if (!INCLUDE_UNFOLLOWS) continue;
-        let followedAt = new Date(follower.followed_at).getTime() / 1000;
-        let user = await getUserById(follower.user_id);
-        let createdAt = new Date(user.created_at).getTime() / 1000;
-        let response = await fetch(
-          `${process.env.DISCORD_WEBHOOK_URL}?wait=true`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              content: `**User Unfollowed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
-              allowed_mentions: { parse: [] }, // Do not allow any kind of pings
-            }),
-          },
-        );
-        console.log(response);
+        let content = await buildContent(follower, false);
+        let response = await postToDiscord(content);
+        await outputIfNotOk(response);
       }
     }
     if (changedFollowers) {
