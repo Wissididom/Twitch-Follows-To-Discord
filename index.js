@@ -45,7 +45,11 @@ var loop = async () => {
         if (!INCLUDE_FOLLOWS) continue;
         let followedAt = new Date(follower.followed_at).getTime() / 1000;
         let user = await getUserById(follower.user_id);
-        let createdAt = new Date(user.created_at).getTime() / 1000;
+        let content = `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)`;
+        if (user) {
+          let createdAt = new Date(user.created_at).getTime() / 1000;
+          content += `\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`;
+        }
         let response = await fetch(
           `${process.env.DISCORD_WEBHOOK_URL}?wait=true`,
           {
@@ -54,7 +58,7 @@ var loop = async () => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              content: `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
+              content,
               allowed_mentions: { parse: [] }, // Do not allow any kind of pings
             }),
           },
@@ -77,7 +81,11 @@ var loop = async () => {
         if (!INCLUDE_UNFOLLOWS) continue;
         let followedAt = new Date(follower.followed_at).getTime() / 1000;
         let user = await getUserById(follower.user_id);
-        let createdAt = new Date(user.created_at).getTime() / 1000;
+        let content = `**User Followed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)`;
+        if (user) {
+          let createdAt = new Date(user.created_at).getTime() / 1000;
+          content += `\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`;
+        }
         let response = await fetch(
           `${process.env.DISCORD_WEBHOOK_URL}?wait=true`,
           {
@@ -86,12 +94,15 @@ var loop = async () => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              content: `**User Unfollowed!**\n**Display-Name**: \`\`${follower.user_name}\`\`\n**User-Name**: \`\`${follower.user_login}\`\`\n**User-ID**: \`\`${follower.user_id}\`\`\n**Followed At**: <t:${followedAt}:F> (<t:${followedAt}:R>)\n**Created At**: <t:${createdAt}:F> (<t:${createdAt}:R>)`,
+              content,
               allowed_mentions: { parse: [] }, // Do not allow any kind of pings
             }),
           },
         );
-        console.log(response);
+        if (!response.ok) {
+          console.log(`${response.status} ${response.statusText}`);
+          console.log(await response.text());
+        }
       }
     }
     if (changedFollowers) {
