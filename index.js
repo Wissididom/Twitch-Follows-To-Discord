@@ -13,8 +13,8 @@ dotenv.config();
 const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == "true";
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == "true";
 
-async function buildContent(follower) {
-  let content = "**User Followed!**";
+async function buildContent(follower, followed) {
+  let content = followed ? "**User Followed!**" : "**User Unfollowed!**";
   if (follower.user_name) {
     content += `\n**Display-Name**: \`\`${follower.user_name}\`\``;
   } else {
