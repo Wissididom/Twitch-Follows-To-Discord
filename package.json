@@ -12,7 +12,7 @@
   "author": "Wissididom",
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^16.4.3"
+    "dotenv": "^16.4.4"
   },
   "devDependencies": {
     "prettier": "^3.2.5"
