@@ -79,7 +79,7 @@ function getStatusResponse(res, json) {
 
 async function getUser(url) {
   return (
-    await fetch(`https://api.twitch.tv/helix/users?login=${login}`, {
+    await fetch(url, {
       headers: {
         "Client-ID": process.env.TWITCH_CLIENT_ID,
         Authorization: `Bearer ${tokens.access_token}`,
