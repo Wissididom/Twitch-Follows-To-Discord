@@ -1,4 +1,4 @@
-import * as dotenv from "dotenv";
+import "dotenv/config";
 
 import * as fs from "fs";
 
@@ -7,8 +7,6 @@ import {
   getChannelFollowers,
   getUserById,
 } from "./twitchApi.js";
-
-dotenv.config();
 
 const INCLUDE_FOLLOWS = process.env.INCLUDE_FOLLOWS.toLowerCase() == "true";
 const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == "true";

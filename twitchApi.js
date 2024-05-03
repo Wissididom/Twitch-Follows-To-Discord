@@ -77,55 +77,32 @@ function getStatusResponse(res, json) {
   }
 }
 
+async function getUser(url) {
+  return (
+    await fetch(url, {
+      headers: {
+        "Client-ID": process.env.TWITCH_CLIENT_ID,
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    })
+      .then((res) => res.json())
+      .catch((err) => console.error)
+  ).data[0];
+}
+
 async function getUserByLogin(login) {
   if (login) {
-    return (
-      await fetch(`https://api.twitch.tv/helix/users?login=${login}`, {
-        headers: {
-          "Client-ID": process.env.TWITCH_CLIENT_ID,
-          Authorization: `Bearer ${tokens.access_token}`,
-        },
-      })
-        .then((res) => res.json())
-        .catch((err) => console.error)
-    ).data[0];
+    return getUser(`https://api.twitch.tv/helix/users?login=${login}`);
   } else {
-    return (
-      await fetch(`https://api.twitch.tv/helix/users`, {
-        headers: {
-          "Client-ID": process.env.TWITCH_CLIENT_ID,
-          Authorization: `Bearer ${tokens.access_token}`,
-        },
-      })
-        .then((res) => res.json())
-        .catch((err) => console.error)
-    ).data[0];
+    return getUser(`https://api.twitch.tv/helix/users`);
   }
 }
 
 async function getUserById(id) {
   if (id) {
-    return (
-      await fetch(`https://api.twitch.tv/helix/users?id=${id}`, {
-        headers: {
-          "Client-ID": process.env.TWITCH_CLIENT_ID,
-          Authorization: `Bearer ${tokens.access_token}`,
-        },
-      })
-        .then((res) => res.json())
-        .catch((err) => console.error)
-    ).data[0];
+    return getUser(`https://api.twitch.tv/helix/users?id=${id}`);
   } else {
-    return (
-      await fetch(`https://api.twitch.tv/helix/users`, {
-        headers: {
-          "Client-ID": process.env.TWITCH_CLIENT_ID,
-          Authorization: `Bearer ${tokens.access_token}`,
-        },
-      })
-        .then((res) => res.json())
-        .catch((err) => console.error)
-    ).data[0];
+    return getUser(`https://api.twitch.tv/helix/users`);
   }
 }
 
