@@ -14,17 +14,17 @@ const INCLUDE_UNFOLLOWS = process.env.INCLUDE_UNFOLLOWS.toLowerCase() == "true";
 async function buildContent(follower, follow) {
   let content = follow ? "**User Followed!**" : "**User Unfollowed!**";
   if (follower.user_name) {
-    content += `\n**Display-Name**: \`\`${follower.user_name}\`\``;
+    content += `\n**Display-Name**: [${follower.user_name}](<https://www.twitch.tv/${follower.user_login}>)`;
   } else {
     content += "\n**Display-Name**: ``(not available)``";
   }
   if (follower.user_login) {
-    content += `\n**User-Name**: \`\`${follower.user_login}\`\``;
+    content += `\n**User-Name**: [${follower.user_login}](<https://www.twitch.tv/${follower.user_login}>)`;
   } else {
     content += "\n**User-Name**: ``(not available)``";
   }
   if (follower.user_id) {
-    content += `\n**User-ID**: \`\`${follower.user_id}\`\``;
+    content += `\n**User-ID**: [${follower.user_id}](<https://www.twitch.tv/${follower.user_login}>)`;
   } else {
     content += "\n**User-ID**: ``(not available)``";
   }
