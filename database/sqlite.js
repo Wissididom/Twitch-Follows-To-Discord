@@ -6,7 +6,7 @@ export default new (class Database {
   constructor() {
     try {
       this.connect("./database/sqlite.db");
-      console.log("Connected to the sqlite3 database");
+      console.log("Connected to the SQLite database");
       this.initDb();
     } catch (err) {
       console.error(err);
