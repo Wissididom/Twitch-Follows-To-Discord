@@ -50,6 +50,14 @@ export default new (class Database {
     return getTokenStatement.get(userId);
   }
 
+  isTokenSet(userId) {
+    const tokenSetStatement = this.#db.prepare(
+      "SELECT COUNT(*) FROM tokens WHERE user_id = ?;",
+    );
+    const tokenCount = tokenSetStatement.get(userId);
+    return tokenCount > 0;
+  }
+
   setToken(userId, accessToken, refreshToken) {
     const setTokenStatement = this.#db.prepare(
       "INSERT INTO tokens (user_id, access_token, refresh_token) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET access_token = excluded.access_token, refresh_token = excluded.refresh_token WHERE user_id = excluded.user_id;",
@@ -58,10 +66,10 @@ export default new (class Database {
   }
 
   getFollowerCount() {
-    const savedSomeFollowers = this.#db.prepare(
+    const followerCountStatement = this.#db.prepare(
       "SELECT COUNT(*) AS followerCount FROM followers;",
     );
-    const followers = savedSomeFollowers.get();
+    const followers = followerCountStatement.get();
     return followers.followerCount;
   }
 

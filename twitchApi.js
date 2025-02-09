@@ -1,5 +1,3 @@
-import * as fs from "fs";
-
 const VALIDATE_ENDPOINT = "https://id.twitch.tv/oauth2/validate";
 const SCOPES = encodeURIComponent(["moderator:read:followers"].join(" "));
 
@@ -11,12 +9,10 @@ var tokens = {
   verification_uri: null,
 };
 
-async function handleDcfLogin(loopCallback) {
-  if (fs.existsSync("./.tokens.json")) {
-    tokens = JSON.parse(
-      fs.readFileSync("./.tokens.json", { encoding: "utf8", flag: "r" }),
-    );
-    let validated = await validate();
+async function handleDcfLogin(db, loopCallback) {
+  if (db.isTokenSet(process.env.BROADCASTER_ID)) {
+    tokens = db.getToken(process.env.BROADCASTER_ID);
+    let validated = await validate(db);
     if (validated) {
       console.log("Validated Tokens and started polling loop");
       await loopCallback();
@@ -52,7 +48,11 @@ async function handleDcfLogin(loopCallback) {
       let tokenJson = await tokenPair.json();
       tokens.access_token = tokenJson.access_token;
       tokens.refresh_token = tokenJson.refresh_token;
-      fs.writeFileSync("./.tokens.json", JSON.stringify(tokens));
+      db.setToken(
+        process.env.BROADCASTER_ID,
+        tokenJson.access_token,
+        tokenJson.refresh_token,
+      );
       clearInterval(dcf_interval);
       console.log("Got Device Code Flow Tokens and started polling loop");
       await loopCallback();
@@ -107,7 +107,7 @@ async function getUserById(id) {
 }
 
 // https://dev.twitch.tv/docs/api/reference/#get-channel-followers
-async function getChannelFollowers(broadcasterId, paginationCursor = null) {
+async function getChannelFollowers(db, broadcasterId, paginationCursor = null) {
   let apiUrl;
   if (paginationCursor) {
     apiUrl = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100&after=${paginationCursor}`;
@@ -125,7 +125,7 @@ async function getChannelFollowers(broadcasterId, paginationCursor = null) {
   const json = await res.json();
   if (res.status == 401) {
     console.log("Status 401");
-    let refreshed = await refresh();
+    let refreshed = await refresh(db);
     if (!refreshed) throw new Error("Token refresh failed");
     return await getChannelFollowers(broadcasterId, paginationCursor);
   }
@@ -159,7 +159,7 @@ async function getChannelFollowers(broadcasterId, paginationCursor = null) {
   }
 }
 
-async function refresh() {
+async function refresh(db) {
   console.log("Refreshing tokens...");
   let refreshResult = await fetch(
     `https://id.twitch.tv/oauth2/token?grant_type=refresh_token&refresh_token=${encodeURIComponent(
@@ -180,7 +180,11 @@ async function refresh() {
     // Successfully refreshed
     tokens.access_token = refreshJson.access_token;
     tokens.refresh_token = refreshJson.refresh_token;
-    fs.writeFileSync("./.tokens.json", JSON.stringify(tokens));
+    db.setToken(
+      process.env.BROADCASTER_ID,
+      refreshJson.access_token,
+      refreshJson.refresh_token,
+    );
     console.log("Successfully refreshed tokens!");
     return true;
   } else {
@@ -190,10 +194,8 @@ async function refresh() {
   }
 }
 
-async function validate() {
-  tokens = JSON.parse(
-    fs.readFileSync(".tokens.json", { encoding: "utf8", flag: "r" }),
-  );
+async function validate(db) {
+  tokens = db.getToken(process.env.BROADCASTER_ID);
   return await fetch("https://id.twitch.tv/oauth2/validate", {
     method: "GET",
     headers: {
@@ -203,7 +205,7 @@ async function validate() {
   }).then(async (res) => {
     if (res.status) {
       if (res.status == 401) {
-        return await refresh();
+        return await refresh(db);
       } else if (res.status >= 200 && res.status < 300) {
         console.log("Successfully validated tokens!");
         return true;

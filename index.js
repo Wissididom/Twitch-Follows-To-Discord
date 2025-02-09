@@ -65,7 +65,10 @@ async function outputIfNotOk(response) {
 var loop = async () => {
   setInterval(async () => {
     // Run every 5 seconds
-    let followers = await getChannelFollowers(process.env.BROADCASTER_ID);
+    let followers = await getChannelFollowers(
+      Database,
+      process.env.BROADCASTER_ID,
+    );
     if (Database.getFollowerCount() < 1) {
       Database.saveFollowerList(followers.followers);
       return; // Don't need to compare lists if the old list doesn't exist yet
@@ -119,7 +122,7 @@ var loop = async () => {
 
 let webhookGetResponse = await fetch(process.env.DISCORD_WEBHOOK_URL);
 if (webhookGetResponse.ok) {
-  await handleDcfLogin(loop);
+  await handleDcfLogin(Database, loop);
 } else {
   console.log(
     `Webhook response wasn't between 200 and 299 inclusive! (Status: ${webhookGetResponse.status} - ${webhookGetResponse.statusText})`,
