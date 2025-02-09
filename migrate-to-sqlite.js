@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { existsSync, readFileSync } from "node:fs";
 import Database from "./database/sqlite.js";
-import { getUserById } from "./twitchApi.js";
 
 const exitHandler = async (signal) => {
   console.log(`Received ${signal}`);

@@ -1,7 +1,5 @@
 import "dotenv/config";
-
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-
+import Database from "./database/sqlite.js";
 import {
   handleDcfLogin,
   getChannelFollowers,
@@ -68,16 +66,11 @@ var loop = async () => {
   setInterval(async () => {
     // Run every 5 seconds
     let followers = await getChannelFollowers(process.env.BROADCASTER_ID);
-    if (!existsSync("lastFollowerList.json")) {
-      writeFileSync(
-        "lastFollowerList.json",
-        `${JSON.stringify(followers, null, 4)}\n`,
-      );
+    if (Database.getFollowerCount() < 1) {
+      Database.saveFollowerList(followers.followers);
       return; // Don't need to compare lists if the old list doesn't exist yet
     }
-    let lastFollowerList = JSON.parse(
-      readFileSync("lastFollowerList.json", { encoding: "utf8", flag: "r" }),
-    );
+    let lastFollowerList = Database.getFollowers();
     let followersToSkip = [];
     if (!Array.isArray(followers.followers))
       console.log(JSON.stringify(followers));
@@ -118,10 +111,7 @@ var loop = async () => {
       }
     }
     if (changedFollowers) {
-      writeFileSync(
-        "lastFollowerList.json",
-        `${JSON.stringify(followers, null, 4)}\n`,
-      );
+      Database.saveFollowerList(followers.followers);
       console.log(`Followers changed`);
     }
   }, 5000);

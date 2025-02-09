@@ -57,6 +57,14 @@ export default new (class Database {
     return setTokenStatement.run(userId, accessToken, refreshToken);
   }
 
+  getFollowerCount() {
+    const savedSomeFollowers = this.#db.prepare(
+      "SELECT COUNT(*) AS followerCount FROM followers;",
+    );
+    const followers = savedSomeFollowers.get();
+    return followers.followerCount;
+  }
+
   saveFollower(userId, userName, userLogin, followedAt) {
     const saveFollowerStatement = this.#db.prepare(
       "INSERT INTO followers (user_id, user_name, user_login, followed_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET user_name = excluded.user_name, user_login = excluded.user_login, followed_at = excluded.followed_at WHERE user_id = excluded.user_id;",
@@ -64,7 +72,7 @@ export default new (class Database {
     return saveFollowerStatement.run(userId, userName, userLogin, followedAt);
   }
 
-  async saveFollowerList(entries) {
+  saveFollowerList(entries) {
     const saveFollowerListStatement = this.#db.prepare(
       "INSERT INTO followers (user_id, user_name, user_login, followed_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET user_name = excluded.user_name, user_login = excluded.user_login, followed_at = excluded.followed_at WHERE user_id = excluded.user_id;",
     );
@@ -81,29 +89,21 @@ export default new (class Database {
     insertMany(entries);
   }
 
-  async getFollowers() {
+  getFollowers() {
     const getFollowersStatement = this.#db.prepare("SELECT * FROM followers;");
     return getFollowersStatement.all();
   }
 
-  async getFollower(userId) {
+  getFollower(userId) {
     const getFollowerStatement = this.#db.prepare(
       "SELECT * FROM followers WHERE user_id = ?;",
     );
     return getFollowerStatement.get(userId);
   }
 
-  async close() {
+  close() {
     if (this.#db) {
-      return await new Promise((resolve, reject) => {
-        this.#db.close((err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
+      this.#db.close();
     }
   }
 })();
