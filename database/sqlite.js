@@ -52,9 +52,9 @@ export default new (class Database {
 
   isTokenSet(userId) {
     const tokenSetStatement = this.#db.prepare(
-      "SELECT COUNT(*) FROM tokens WHERE user_id = ?;",
+      "SELECT COUNT(*) AS tokenCount FROM tokens WHERE user_id = ?;",
     );
-    const tokenCount = tokenSetStatement.get(userId);
+    const tokenCount = tokenSetStatement.get(userId).tokenCount;
     return tokenCount > 0;
   }
 
@@ -78,6 +78,13 @@ export default new (class Database {
       "INSERT INTO followers (user_id, user_name, user_login, followed_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET user_name = excluded.user_name, user_login = excluded.user_login, followed_at = excluded.followed_at WHERE user_id = excluded.user_id;",
     );
     return saveFollowerStatement.run(userId, userName, userLogin, followedAt);
+  }
+
+  deleteFollower(userId) {
+    const deleteFollowerStatement = this.#db.prepare(
+      "DELETE FROM followers WHERE user_id = ?;",
+    );
+    return deleteFollowerStatement.run(userId);
   }
 
   saveFollowerList(entries) {

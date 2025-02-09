@@ -11,7 +11,6 @@ var tokens = {
 
 async function handleDcfLogin(db, loopCallback) {
   if (db.isTokenSet(process.env.BROADCASTER_ID)) {
-    tokens = db.getToken(process.env.BROADCASTER_ID);
     let validated = await validate(db);
     if (validated) {
       console.log("Validated Tokens and started polling loop");

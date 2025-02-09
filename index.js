@@ -75,12 +75,9 @@ var loop = async () => {
     }
     let lastFollowerList = Database.getFollowers();
     let followersToSkip = [];
-    if (!Array.isArray(followers.followers))
-      console.log(JSON.stringify(followers));
-    let changedFollowers = false;
     for (let follower of followers.followers) {
       if (
-        lastFollowerList.followers.find((item) => {
+        lastFollowerList.find((item) => {
           return item.user_id == follower.user_id;
         })
       ) {
@@ -88,14 +85,19 @@ var loop = async () => {
         followersToSkip.push(follower.user_id);
       } else {
         // Follower only in new list, aka. channel.follow
-        changedFollowers = true;
+        Database.saveFollower(
+          follower.user_id,
+          follower.user_name,
+          follower.user_login,
+          follower.followed_at,
+        );
         if (!INCLUDE_FOLLOWS) continue;
         let content = await buildContent(follower, true);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
     }
-    for (let follower of lastFollowerList.followers) {
+    for (let follower of lastFollowerList) {
       if (followersToSkip.includes(follower.user_id)) continue; // Skip followers that are in both lists
       if (
         followers.followers.find((item) => {
@@ -106,16 +108,17 @@ var loop = async () => {
         followersToSkip.push(follower.user_id);
       } else {
         // Follower only in old list, aka. channel.unfollow
-        changedFollowers = true;
+        Database.deleteFollower(
+          follower.user_id,
+          follower.user_name,
+          follower.user_login,
+          follower.followed_at,
+        );
         if (!INCLUDE_UNFOLLOWS) continue;
         let content = await buildContent(follower, false);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
-    }
-    if (changedFollowers) {
-      Database.saveFollowerList(followers.followers);
-      console.log(`Followers changed`);
     }
   }, 5000);
 };
