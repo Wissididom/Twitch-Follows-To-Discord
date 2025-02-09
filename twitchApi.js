@@ -76,23 +76,6 @@ async function getUser(identifier, type = "login") {
   }
 }
 
-function getStatusResponse(res, json) {
-  switch (res.status) {
-    case 400:
-      return `Bad Request: ${json.message}`;
-    case 401:
-      return `Unauthorized: ${json.message}`;
-    case 404:
-      return `Not Found: ${json.message}`;
-    case 429:
-      return `Too Many Requests: ${json.message}`;
-    case 500:
-      return `Internal Server Error: ${json.message}`;
-    default:
-      return `${json.error} (${res.status}): ${json.message}`;
-  }
-}
-
 // https://dev.twitch.tv/docs/api/reference/#get-channel-followers
 async function getChannelFollowers(db, broadcasterId, paginationCursor = null) {
   let apiUrl = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100`;
