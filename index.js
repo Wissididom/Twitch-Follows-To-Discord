@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import * as fs from "fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import {
   handleDcfLogin,
@@ -68,15 +68,15 @@ var loop = async () => {
   setInterval(async () => {
     // Run every 5 seconds
     let followers = await getChannelFollowers(process.env.BROADCASTER_ID);
-    if (!fs.existsSync("lastFollowerList.json")) {
-      fs.writeFileSync(
+    if (!existsSync("lastFollowerList.json")) {
+      writeFileSync(
         "lastFollowerList.json",
         `${JSON.stringify(followers, null, 4)}\n`,
       );
       return; // Don't need to compare lists if the old list doesn't exist yet
     }
     let lastFollowerList = JSON.parse(
-      fs.readFileSync("lastFollowerList.json", { encoding: "utf8", flag: "r" }),
+      readFileSync("lastFollowerList.json", { encoding: "utf8", flag: "r" }),
     );
     let followersToSkip = [];
     if (!Array.isArray(followers.followers))
@@ -118,7 +118,7 @@ var loop = async () => {
       }
     }
     if (changedFollowers) {
-      fs.writeFileSync(
+      writeFileSync(
         "lastFollowerList.json",
         `${JSON.stringify(followers, null, 4)}\n`,
       );
