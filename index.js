@@ -1,7 +1,5 @@
 import "dotenv/config";
-
-import * as fs from "fs";
-
+import Database from "./database/sqlite.js";
 import {
   handleDcfLogin,
   getChannelFollowers,
@@ -67,24 +65,19 @@ async function outputIfNotOk(response) {
 var loop = async () => {
   setInterval(async () => {
     // Run every 5 seconds
-    let followers = await getChannelFollowers(process.env.BROADCASTER_ID);
-    if (!fs.existsSync("lastFollowerList.json")) {
-      fs.writeFileSync(
-        "lastFollowerList.json",
-        `${JSON.stringify(followers, null, 4)}\n`,
-      );
+    let followers = await getChannelFollowers(
+      Database,
+      process.env.BROADCASTER_ID,
+    );
+    if (Database.getFollowerCount() < 1) {
+      Database.saveFollowerList(followers.followers);
       return; // Don't need to compare lists if the old list doesn't exist yet
     }
-    let lastFollowerList = JSON.parse(
-      fs.readFileSync("lastFollowerList.json", { encoding: "utf8", flag: "r" }),
-    );
+    let lastFollowerList = Database.getFollowers();
     let followersToSkip = [];
-    if (!Array.isArray(followers.followers))
-      console.log(JSON.stringify(followers));
-    let changedFollowers = false;
     for (let follower of followers.followers) {
       if (
-        lastFollowerList.followers.find((item) => {
+        lastFollowerList.find((item) => {
           return item.user_id == follower.user_id;
         })
       ) {
@@ -92,14 +85,19 @@ var loop = async () => {
         followersToSkip.push(follower.user_id);
       } else {
         // Follower only in new list, aka. channel.follow
-        changedFollowers = true;
+        Database.saveFollower(
+          follower.user_id,
+          follower.user_name,
+          follower.user_login,
+          follower.followed_at,
+        );
         if (!INCLUDE_FOLLOWS) continue;
         let content = await buildContent(follower, true);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
     }
-    for (let follower of lastFollowerList.followers) {
+    for (let follower of lastFollowerList) {
       if (followersToSkip.includes(follower.user_id)) continue; // Skip followers that are in both lists
       if (
         followers.followers.find((item) => {
@@ -110,26 +108,24 @@ var loop = async () => {
         followersToSkip.push(follower.user_id);
       } else {
         // Follower only in old list, aka. channel.unfollow
-        changedFollowers = true;
+        Database.deleteFollower(
+          follower.user_id,
+          follower.user_name,
+          follower.user_login,
+          follower.followed_at,
+        );
         if (!INCLUDE_UNFOLLOWS) continue;
         let content = await buildContent(follower, false);
         let response = await postToDiscord(content);
         await outputIfNotOk(response);
       }
     }
-    if (changedFollowers) {
-      fs.writeFileSync(
-        "lastFollowerList.json",
-        `${JSON.stringify(followers, null, 4)}\n`,
-      );
-      console.log(`Followers changed`);
-    }
   }, 5000);
 };
 
 let webhookGetResponse = await fetch(process.env.DISCORD_WEBHOOK_URL);
 if (webhookGetResponse.ok) {
-  await handleDcfLogin(loop);
+  await handleDcfLogin(Database, loop);
 } else {
   console.log(
     `Webhook response wasn't between 200 and 299 inclusive! (Status: ${webhookGetResponse.status} - ${webhookGetResponse.statusText})`,
