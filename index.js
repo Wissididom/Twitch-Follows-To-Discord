@@ -66,42 +66,48 @@ async function postToDiscord(content) {
 const syncFollowers = async () => {
   setInterval(async () => {
     // Run every 5 seconds
-    let followers = await getChannelFollowers(
-      Database,
-      process.env.BROADCASTER_ID,
-    );
-    const newFollowerList = followers.followers;
-    if (!Database.getFollowerCount()) {
-      // Don't need to compare lists if the old list doesn't exist yet
-      return Database.saveFollowerList(newFollowerList);
-    }
-    const lastFollowerList = Database.getFollowers();
-    const lastFollowerSet = new Set(lastFollowerList.map((f) => f.user_id));
-    const addedFollowers = newFollowerList.filter(
-      (f) => !lastFollowerSet.has(f.user_id),
-    );
-    const removedFollowers = lastFollowerList.filter(
-      (f) => !newFollowerList.some((nf) => nf.user_id === f.user_id),
-    );
-    for (const follower of addedFollowers) {
-      Database.saveFollower(
-        follower.user_id,
-        follower.user_name,
-        follower.user_login,
-        follower.followed_at,
+    try {
+      const followers = await getChannelFollowers(
+        Database,
+        process.env.BROADCASTER_ID,
       );
-      if (INCLUDE_FOLLOWS)
-        await postToDiscord(await buildContent(follower, true));
-    }
-    for (const follower of removedFollowers) {
-      Database.deleteFollower(
-        follower.user_id,
-        follower.user_name,
-        follower.user_login,
-        follower.followed_at,
+      const newFollowerList = followers.followers;
+      const lastFollowerList = Database.getFollowers();
+      if (!lastFollowerList.length) {
+        // Don't need to compare lists if the old list doesn't exist yet
+        return Database.saveFollowerList(newFollowerList);
+      }
+      const lastFollowerSet = new Set(lastFollowerList.map((f) => f.user_id));
+      const addedFollowers = newFollowerList.filter(
+        (f) => !lastFollowerSet.has(f.user_id),
       );
-      if (INCLUDE_UNFOLLOWS)
-        await postToDiscord(await buildContent(follower, false));
+      console.log("added:", addedFollowers);
+      const removedFollowers = lastFollowerList.filter(
+        (f) => !newFollowerList.some((nf) => nf.user_id === f.user_id),
+      );
+      console.log("removed:", removedFollowers);
+      for (const follower of addedFollowers) {
+        Database.saveFollower(
+          follower.user_id,
+          follower.user_name,
+          follower.user_login,
+          follower.followed_at,
+        );
+        if (INCLUDE_FOLLOWS)
+          await postToDiscord(await buildContent(follower, true));
+      }
+      for (const follower of removedFollowers) {
+        Database.deleteFollower(
+          follower.user_id,
+          follower.user_name,
+          follower.user_login,
+          follower.followed_at,
+        );
+        if (INCLUDE_UNFOLLOWS)
+          await postToDiscord(await buildContent(follower, false));
+      }
+    } catch (err) {
+      console.log("Error getting followers:", err);
     }
   }, 5000);
 };

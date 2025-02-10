@@ -19,8 +19,9 @@ async function fetchTwitchApi(url, method = "GET", body = null) {
   if (body) options.body = JSON.stringify(body);
   const res = await fetch(url, options);
   const json = await res.json();
-  if (!res.ok)
+  if (!res.ok) {
     throw new Error(`${res.status} ${json.message || res.statusText}`);
+  }
   return json;
 }
 
@@ -87,7 +88,8 @@ async function getChannelFollowers(db, broadcasterId, paginationCursor = null) {
     let followers = json.data || [];
     if (json.pagination?.cursor) {
       followers = followers.concat(
-        await getChannelFollowers(db, broadcasterId, json.pagination.cursor),
+        (await getChannelFollowers(db, broadcasterId, json.pagination.cursor))
+          .followers,
       );
     }
     return { total: json.total, followers };
