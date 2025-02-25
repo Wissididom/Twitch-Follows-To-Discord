@@ -18,7 +18,7 @@ async function buildContent(follower, isFollow) {
   );
   content += formatField(
     "User-Name",
-    follower.user_name,
+    follower.user_login,
     `https://www.twitch.tv/${follower.user_login}`,
   );
   content += formatField(
