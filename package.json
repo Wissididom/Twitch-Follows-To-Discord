@@ -13,7 +13,7 @@
   "author": "Wissididom",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^12.3.0",
+    "better-sqlite3": "^12.4.1",
     "dotenv": "^17.2.2"
   },
   "devDependencies": {
