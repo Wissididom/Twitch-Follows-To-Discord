@@ -17,6 +17,6 @@
     "dotenv": "^17.2.3"
   },
   "devDependencies": {
-    "prettier": "^3.7.1"
+    "prettier": "^3.7.3"
   }
 }
