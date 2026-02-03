@@ -55,9 +55,10 @@ async function postToDiscord(content) {
       allowed_mentions: { parse: [] }, // Do not allow any kind of pings
     }),
   });
+  console.log(`Sent request for content:\n${content}`);
   if (!response.ok) {
     console.error(
-      `${response.status} ${response.statusText}`,
+      `Received error response from Discord:\n${response.status} ${response.statusText}`,
       await response.text(),
     );
   }
