@@ -14,7 +14,7 @@
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^12.6.2",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.4"
   },
   "devDependencies": {
     "prettier": "^3.8.1"
