@@ -1,7 +1,7 @@
 const VALIDATE_ENDPOINT = "https://id.twitch.tv/oauth2/validate";
 const SCOPES = encodeURIComponent(["moderator:read:followers"].join(" "));
 
-var tokens = {
+let tokens = {
   access_token: null,
   refresh_token: null,
   device_code: null,
@@ -9,14 +9,21 @@ var tokens = {
   verification_uri: null,
 };
 
-async function fetchTwitchApi(url, method = "GET", body = null) {
+async function fetchTwitchApi(
+  url: string,
+  method: string = "GET",
+  body: any = null,
+) {
   const headers = {
-    "Client-ID": process.env.TWITCH_CLIENT_ID,
+    "Client-ID": Deno.env.get("TWITCH_CLIENT_ID"),
     Authorization: `Bearer ${tokens.access_token}`,
     "Content-Type": "application/json",
   };
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
+  const options = {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  };
   const res = await fetch(url, options);
   const json = await res.json();
   if (!res.ok) {
@@ -25,13 +32,15 @@ async function fetchTwitchApi(url, method = "GET", body = null) {
   return json;
 }
 
-async function handleDcfLogin(db, loopCallback) {
-  if (db.isTokenSet(process.env.BROADCASTER_ID) && (await validate(db))) {
+async function handleDcfLogin(db: any, loopCallback: any) {
+  if (db.isTokenSet(Deno.env.get("BROADCASTER_ID")) && (await validate(db))) {
     console.log("Validated Tokens. Starting loop...");
     return await loopCallback();
   }
-  let dcf = await fetch(
-    `https://id.twitch.tv/oauth2/device?client_id=${process.env.TWITCH_CLIENT_ID}&scopes=${SCOPES}`,
+  const dcf = await fetch(
+    `https://id.twitch.tv/oauth2/device?client_id=${
+      Deno.env.get("TWITCH_CLIENT_ID")
+    }&scopes=${SCOPES}`,
     {
       method: "POST",
     },
@@ -43,8 +52,10 @@ async function handleDcfLogin(db, loopCallback) {
     `Open ${tokens.verification_uri} in a browser and enter ${tokens.user_code}!`,
   );
   const dcfInterval = setInterval(async () => {
-    let tokenRes = await fetch(
-      `https://id.twitch.tv/oauth2/token?client_id=${process.env.TWITCH_CLIENT_ID}&scopes=${SCOPES}&device_code=${tokens.device_code}&grant_type=urn:ietf:params:oauth:grant-type:device_code`,
+    const tokenRes = await fetch(
+      `https://id.twitch.tv/oauth2/token?client_id=${
+        Deno.env.get("TWITCH_CLIENT_ID")
+      }&scopes=${SCOPES}&device_code=${tokens.device_code}&grant_type=urn:ietf:params:oauth:grant-type:device_code`,
       {
         method: "POST",
       },
@@ -54,7 +65,7 @@ async function handleDcfLogin(db, loopCallback) {
       const tokenJson = await tokenRes.json();
       Object.assign(tokens, tokenJson);
       db.setToken(
-        process.env.BROADCASTER_ID,
+        Deno.env.get("BROADCASTER_ID"),
         tokens.access_token,
         tokens.refresh_token,
       );
@@ -65,7 +76,7 @@ async function handleDcfLogin(db, loopCallback) {
   }, 1000);
 }
 
-async function getUser(identifier, type = "login") {
+async function getUser(identifier: string, type: string = "login") {
   if (identifier) {
     return (
       await fetchTwitchApi(
@@ -78,8 +89,13 @@ async function getUser(identifier, type = "login") {
 }
 
 // https://dev.twitch.tv/docs/api/reference/#get-channel-followers
-async function getChannelFollowers(db, broadcasterId, paginationCursor = null) {
-  let apiUrl = `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100`;
+async function getChannelFollowers(
+  db: any,
+  broadcasterId: string,
+  paginationCursor: string | null = null,
+) {
+  let apiUrl =
+    `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=100`;
   if (paginationCursor) {
     apiUrl += `&after=${paginationCursor}`;
   }
@@ -94,7 +110,7 @@ async function getChannelFollowers(db, broadcasterId, paginationCursor = null) {
     }
     return { total: json.total, followers };
   } catch (err) {
-    if (err.message.startsWith("401")) {
+    if ((err as any).message.startsWith("401")) {
       console.log("Token expired. Refreshing...");
       if (!(await refresh(db))) throw new Error("Token refresh failed");
       return await getChannelFollowers(db, broadcasterId, paginationCursor);
@@ -103,40 +119,42 @@ async function getChannelFollowers(db, broadcasterId, paginationCursor = null) {
   }
 }
 
-async function refresh(db) {
+async function refresh(db: any) {
   console.log("Refreshing tokens...");
   try {
     const json = await fetchTwitchApi(
-      `https://id.twitch.tv/oauth2/token?grant_type=refresh_token&refresh_token=${encodeURIComponent(
-        tokens.refresh_token,
-      )}&client_id=${process.env.TWITCH_CLIENT_ID}&client_secret=${
-        process.env.TWITCH_CLIENT_SECRET
+      `https://id.twitch.tv/oauth2/token?grant_type=refresh_token&refresh_token=${
+        encodeURIComponent(
+          tokens.refresh_token ?? "",
+        )
+      }&client_id=${Deno.env.get("TWITCH_CLIENT_ID")}&client_secret=${
+        Deno.env.get("TWITCH_CLIENT_SECRET")
       }`,
       "POST",
     );
     Object.assign(tokens, json);
     db.setToken(
-      process.env.BROADCASTER_ID,
+      Deno.env.get("BROADCASTER_ID"),
       tokens.access_token,
       tokens.refresh_token,
     );
     console.log("Tokens refreshed successfully!");
     return true;
   } catch (err) {
-    console.error("Token refresh failed:", err.message);
+    console.error("Token refresh failed:", (err as any).message);
     return false;
   }
 }
 
-async function validate(db) {
-  tokens = db.getToken(process.env.BROADCASTER_ID);
+async function validate(db: any) {
+  tokens = db.getToken(Deno.env.get("BROADCASTER_ID"));
   try {
     await fetchTwitchApi(VALIDATE_ENDPOINT);
     console.log("Tokens validated successfully!");
     return true;
   } catch (err) {
-    return err.message.startsWith("401") ? await refresh(db) : false;
+    return (err as any).message.startsWith("401") ? await refresh(db) : false;
   }
 }
 
-export { handleDcfLogin, getUser, getChannelFollowers };
+export { getChannelFollowers, getUser, handleDcfLogin };
