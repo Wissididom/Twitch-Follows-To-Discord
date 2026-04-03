@@ -1,4 +1,5 @@
 name: Deno Formatting and Linting
+
 permissions:
   contents: read
 
