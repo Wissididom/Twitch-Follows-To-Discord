@@ -1,0 +1,33 @@
+name: Deno Formatting and Linting
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ["master", "main"]
+  pull_request:
+    branches: ["master", "main"]
+
+jobs:
+  format-and-lint:
+    name: Check Formatting and Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install dependencies
+        run: |
+          deno install
+      - name: Check format
+        run: |
+          deno fmt
+          git --no-pager diff --exit-code --color=never
+      - name: Check lint
+        run: |
+          deno lint --fix
+          git --no-pager diff --exit-code --color=never
