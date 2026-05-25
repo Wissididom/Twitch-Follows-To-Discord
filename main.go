@@ -34,7 +34,7 @@ func formatField(label, value string, link *string) string {
 	}
 
 	if link != nil && *link != "" {
-		return fmt.Sprintf("\n**%s**: [%s](<{%s}>)", label, value, *link)
+		return fmt.Sprintf("\n**%s**: [%s](<%s>)", label, value, *link)
 	}
 
 	return fmt.Sprintf("\n**%s**: %s", label, value)
