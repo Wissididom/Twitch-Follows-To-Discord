@@ -91,4 +91,3 @@ jobs:
           git tag -f nightly-build
           git push -f origin nightly-build
         shell: bash
-
