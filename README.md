@@ -10,7 +10,7 @@ that is the reason this tool exists.
 
 ## Prerequisites
 
-- Deno v2+
+- Go 1.23+ (or use the pre-built binary if available)
 - Twitch Client ID (Can be created on https://dev.twitch.tv)
 - Twitch Client Secret (Can be created on https://dev.twitch.tv)
 - Discord Webhook URL (`Server Settings` -> `Integrations` -> `Webhooks` or
@@ -22,5 +22,23 @@ that is the reason this tool exists.
   can skip this step if you want to use environment variables)
 - Fill out the `.env` file or set environment variables with the keys you'll
   find in `example.env`
-- Install dependencies using `deno install`
-- Run `deno run --env -ENRW main.ts`
+
+### Option 1: Using Pre-built Binary
+
+If a pre-built binary is available, simply run:
+```bash
+./twitch-follows-to-discord
+```
+
+### Option 2: Building from Source
+
+Build the binary:
+```bash
+go build -o twitch-follows-to-discord .
+```
+
+Then run:
+```bash
+./twitch-follows-to-discord
+```
+

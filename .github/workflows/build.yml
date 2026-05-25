@@ -1,4 +1,4 @@
-name: Deno Build
+name: Go Build
 
 permissions:
   "contents": "write"
@@ -16,31 +16,27 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        include:
+          - os: ubuntu-latest
+            output: twitch-follows-to-discord
+          - os: macos-latest
+            output: twitch-follows-to-discord
+          - os: windows-latest
+            output: twitch-follows-to-discord.exe
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          deno-version: v2.x
-      - name: Install dependencies
-        run: |
-          deno install
-      - name: Compile
-        run: |
-          deno compile -ERWN main.ts
-      - name: Upload artifact (Windows)
-        if: startsWith(matrix.os, 'windows')
+          go-version: "1.23"
+      - name: Build
+        run: go build -o ${{ matrix.output }} .
+      - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Twitch-Follows-To-Discord-${{ matrix.os }}
-          path: Twitch-Follows-To-Discord.exe
-      - name: Upload artifact (Ubuntu and Mac)
-        if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
-        uses: actions/upload-artifact@v7
-        with:
-          name: Twitch-Follows-To-Discord-${{ matrix.os }}
-          path: Twitch-Follows-To-Discord
+          name: twitch-follows-to-discord-${{ matrix.os }}
+          path: ${{ matrix.output }}
   create-release:
     needs: [build]
     runs-on: ubuntu-latest
@@ -54,29 +50,29 @@ jobs:
       - uses: actions/download-artifact@v8
         name: Download Windows
         with:
-          name: Twitch-Follows-To-Discord-windows-latest
+          name: twitch-follows-to-discord-windows-latest
           path: release-artifacts/
 
       - name: Rename Windows Binary
-        run: mv release-artifacts/Twitch-Follows-To-Discord.exe release-artifacts/Twitch-Follows-To-Discord-Windows.exe
+        run: mv release-artifacts/twitch-follows-to-discord.exe release-artifacts/twitch-follows-to-discord-Windows.exe
 
       - uses: actions/download-artifact@v8
         name: Download Linux
         with:
-          name: Twitch-Follows-To-Discord-ubuntu-latest
+          name: twitch-follows-to-discord-ubuntu-latest
           path: release-artifacts/
 
       - name: Rename Linux Binary
-        run: mv release-artifacts/Twitch-Follows-To-Discord release-artifacts/Twitch-Follows-To-Discord-Linux
+        run: mv release-artifacts/twitch-follows-to-discord release-artifacts/twitch-follows-to-discord-Linux
 
       - uses: actions/download-artifact@v8
         name: Download Mac
         with:
-          name: Twitch-Follows-To-Discord-macos-latest
+          name: twitch-follows-to-discord-macos-latest
           path: release-artifacts/
 
       - name: Rename Mac Binary
-        run: mv release-artifacts/Twitch-Follows-To-Discord release-artifacts/Twitch-Follows-To-Discord-Mac
+        run: mv release-artifacts/twitch-follows-to-discord release-artifacts/twitch-follows-to-discord-Mac
 
       - name: Create release
         uses: ncipollo/release-action@v1.21.0
@@ -95,3 +91,4 @@ jobs:
           git tag -f nightly-build
           git push -f origin nightly-build
         shell: bash
+

@@ -1,5 +1,16 @@
 .env
-node_modules/
 database/sqlite.db
 .tokens.json
 lastFollowerList.json
+
+# Go
+/twitch-follows-to-discord
+*.o
+*.a
+*.so
+dist/
+
+# Node/Deno (legacy)
+node_modules/
+deno.lock
+
