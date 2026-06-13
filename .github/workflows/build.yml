@@ -18,11 +18,11 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         include:
           - os: ubuntu-latest
-            output: twitch-follows-to-discord
+            output: Twitch-Follows-To-Discord-Linux
           - os: macos-latest
-            output: twitch-follows-to-discord
+            output: Twitch-Follows-To-Discord-Mac
           - os: windows-latest
-            output: twitch-follows-to-discord.exe
+            output: Twitch-Follows-To-Discord-Windows.exe
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -35,7 +35,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: twitch-follows-to-discord-${{ matrix.os }}
+          name: Twitch-Follows-To-Discord-${{ matrix.os }}
           path: ${{ matrix.output }}
   create-release:
     needs: [build]
@@ -46,33 +46,11 @@ jobs:
       - uses: actions/checkout@v6
         name: Checkout Code
 
-      # Windows
       - uses: actions/download-artifact@v8
-        name: Download Windows
+        name: Download artifacts
         with:
-          name: twitch-follows-to-discord-windows-latest
           path: release-artifacts/
-
-      - name: Rename Windows Binary
-        run: mv release-artifacts/twitch-follows-to-discord.exe release-artifacts/twitch-follows-to-discord-Windows.exe
-
-      - uses: actions/download-artifact@v8
-        name: Download Linux
-        with:
-          name: twitch-follows-to-discord-ubuntu-latest
-          path: release-artifacts/
-
-      - name: Rename Linux Binary
-        run: mv release-artifacts/twitch-follows-to-discord release-artifacts/twitch-follows-to-discord-Linux
-
-      - uses: actions/download-artifact@v8
-        name: Download Mac
-        with:
-          name: twitch-follows-to-discord-macos-latest
-          path: release-artifacts/
-
-      - name: Rename Mac Binary
-        run: mv release-artifacts/twitch-follows-to-discord release-artifacts/twitch-follows-to-discord-Mac
+          merge-multiple: true
 
       - name: Create release
         uses: ncipollo/release-action@v1.21.0
